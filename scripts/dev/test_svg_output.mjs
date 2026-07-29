@@ -32,16 +32,19 @@ function getColorType(componentIndex, totalComponents) {
   if (totalComponents === 2) {
     return componentIndex === 0 ? 'choseong' : 'jungseong';
   }
-  if (componentIndex === 0) return 'choseong';
-  if (componentIndex === totalComponents - 1) return 'jongseong';
-  return 'jungseong';
+  // UnDotum uses [choseong, jongseong, jungseong] for syllables with a final.
+  if (totalComponents === 3) return ['choseong', 'jongseong', 'jungseong'][componentIndex];
+  return null;
 }
 
 function buildSVG(char, colors, outputSize = 300) {
   const glyph = font.charToGlyph(char);
-  console.log(`\n'${char}': isComposite=${glyph.numberOfContours === -1}, components=${glyph.components?.length}`);
+  // opentype.js fills glyph.components only after resolving the path.
+  void glyph.path;
+  const isComposite = Array.isArray(glyph.components) && glyph.components.length > 0;
+  console.log(`\n'${char}': isComposite=${isComposite}, components=${glyph.components?.length}`);
 
-  if (glyph.numberOfContours !== -1 || !glyph.components?.length) {
+  if (!isComposite) {
     const path = glyph.getPath(0, FONT_SIZE, FONT_SIZE);
     const bb = path.getBoundingBox();
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="${bb.x1} ${bb.y1} ${bb.x2 - bb.x1} ${bb.y2 - bb.y1}">

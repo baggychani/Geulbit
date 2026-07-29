@@ -12,10 +12,8 @@ echo.
 if not exist "node_modules" (
     echo Installing packages...
     call npm install
+    if errorlevel 1 exit /b 1
     echo.
 )
 
-start "" "http://localhost:5173"
-timeout /t 2 /nobreak >nul
-
-call npm run dev
+call npm run dev -- --open --strictPort

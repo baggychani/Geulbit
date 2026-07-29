@@ -18,6 +18,7 @@ let loadedFont = null;
 let loadedFontUrl = null;
 /** URL → 파싱된 폰트 (전환 시 재 fetch/parse 방지) */
 const fontCache = new Map();
+let bundledFontsPromise = null;
 
 /** 번들 폰트 (public/) */
 export const FONT_VARIANTS = {
@@ -75,8 +76,14 @@ export function setActiveFont(fontUrl) {
  * 번들 폰트 전부 미리 로드
  */
 export async function preloadBundledFonts() {
-  const urls = Object.values(FONT_VARIANTS).map(v => v.url);
-  await Promise.all(urls.map(url => loadFont(url)));
+  if (!bundledFontsPromise) {
+    const urls = Object.values(FONT_VARIANTS).map(v => v.url);
+    bundledFontsPromise = Promise.all(urls.map(url => loadFont(url))).catch(error => {
+      bundledFontsPromise = null;
+      throw error;
+    });
+  }
+  await bundledFontsPromise;
 }
 
 /**

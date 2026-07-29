@@ -28,11 +28,12 @@ const testChars = ['한', '글', '가', '각', '닭', '뷁', '안'];
 
 for (const char of testChars) {
   const g = font.charToGlyph(char);
-  const isComposite = g.numberOfContours === -1;
+  // opentype.js populates components lazily when the path is resolved.
+  void g.path;
+  const isComposite = Array.isArray(g.components) && g.components.length > 0;
 
   console.log(`\n=== '${char}' (U+${char.charCodeAt(0).toString(16).toUpperCase()}) ===`);
   console.log('  glyphIndex:', g.index);
-  console.log('  numberOfContours:', g.numberOfContours);
   console.log('  isComposite:', isComposite);
 
   if (isComposite && g.components) {

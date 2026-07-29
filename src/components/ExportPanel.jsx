@@ -3,7 +3,7 @@
  * SVG/PNG 내보내기 — 브라우저 기본 다운로드(다운로드 폴더)만 사용
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import JSZip from 'jszip';
 import { exportSVG, exportPNG } from './SyllableRenderer';
 import { parseText } from '../utils/hangulDecompose';
@@ -16,6 +16,9 @@ const SIZE_OPTIONS = [
   { id: '800', label: '800', value: 800, title: '800px' },
   { id: '1200', label: '1200', value: 1200, title: '1200px' },
 ];
+
+const EXPORT_CANCELLED = 'export-cancelled';
+const YIELD_EVERY = 4;
 
 /** Blob을 파일 이름으로 바로 다운로드 (File System Access API 미사용) */
 function downloadBlob(blob, filename) {
@@ -36,15 +39,29 @@ function delay(ms) {
 
 /** ZIP 파일명용: 입력 순서대로 한글만 이어 붙임 (예: 안녕하세요 → 안녕하세요) */
 function buildExportBaseName(text) {
-  const hangul = parseText(text || '')
-    .filter(t => t.isHangul)
-    .map(t => t.char)
-    .join('');
-  const sanitized = hangul
+  const sanitized = (text || '')
+    .normalize('NFC')
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '')
-    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/^[.\-\s]+|[.\-\s]+$/g, '')
     .slice(0, 80);
-  return sanitized || 'hangul';
+  return sanitized || '한글';
+}
+
+function buildExportFilename({ text, char, outputSize, type, renderMode, archive = false }) {
+  const modePrefix = renderMode === 'grid' ? '자모그리드' : '모아쓰기';
+  const target = char || buildExportBaseName(text);
+  const base = `${modePrefix}_${target}`;
+
+  if (archive) {
+    return type === 'png'
+      ? `${base}_${outputSize}px_PNG.zip`
+      : `${base}_SVG.zip`;
+  }
+
+  return type === 'png'
+    ? `${base}_${outputSize}px.png`
+    : `${base}.svg`;
 }
 
 export default function ExportPanel({ text, colors, layerOrder, renderMode = 'classic' }) {
@@ -53,7 +70,9 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
   const [useZip, setUseZip] = useState(true);
   const [deduplicate, setDeduplicate] = useState(true);
   const [exporting, setExporting] = useState(null);
+  const [exportProgress, setExportProgress] = useState(null);
   const [message, setMessage] = useState(null);
+  const cancelRequestedRef = useRef(false);
 
   let syllables = parseText(text || '').filter(t => t.isHangul);
   if (deduplicate) {
@@ -64,8 +83,6 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
       return true;
     });
   }
-  const exportBaseName = buildExportBaseName(text);
-
   const showMessage = (msg, type = 'success') => {
     setMessage({ text: msg, type });
     setTimeout(() => setMessage(null), 3000);
@@ -73,81 +90,189 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
 
   const exportManyAsZip = useCallback(async (addToZip) => {
     const zip = new JSZip();
-    for (const syl of syllables) {
-      await addToZip(zip, syl.char);
+    const failedChars = [];
+    for (let index = 0; index < syllables.length; index += 1) {
+      if (cancelRequestedRef.current) {
+        const error = new Error(EXPORT_CANCELLED);
+        error.code = EXPORT_CANCELLED;
+        throw error;
+      }
+
+      const char = syllables[index].char;
+      try {
+        const added = await addToZip(zip, char);
+        if (!added) failedChars.push(char);
+      } catch (error) {
+        console.error(`[ExportPanel] ${char} export failed`, error);
+        failedChars.push(char);
+      }
+
+      setExportProgress({ current: index + 1, total: syllables.length });
+      if ((index + 1) % YIELD_EVERY === 0) await delay(0);
     }
+
+    if (failedChars.length > 0) {
+      throw new Error(`${t('export.failedChars')}: ${failedChars.join(', ')}`);
+    }
+
     return zip.generateAsync({ type: 'blob' });
-  }, [syllables]);
+  }, [syllables, t]);
 
   const handleExportPNG = useCallback(async () => {
     if (syllables.length === 0) {
       showMessage(t('export.noHangul'), 'error');
       return;
     }
+    cancelRequestedRef.current = false;
     setExporting('png');
+    setExportProgress({ current: 0, total: syllables.length });
     try {
       if (syllables.length === 1) {
         const blob = await exportPNG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
         if (!blob) throw new Error('PNG 변환 실패');
-        downloadBlob(blob, `hangul_${syllables[0].char}_${outputSize}px.png`);
+        downloadBlob(blob, buildExportFilename({
+          text,
+          char: syllables[0].char,
+          outputSize,
+          type: 'png',
+          renderMode,
+        }));
+        setExportProgress({ current: 1, total: 1 });
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
           const b = await exportPNG(char, colors, outputSize, layerOrder, renderMode);
-          if (b) zip.file(`hangul_${char}_${outputSize}px.png`, b);
+          if (!b) return false;
+          zip.file(buildExportFilename({
+            text,
+            char,
+            outputSize,
+            type: 'png',
+            renderMode,
+          }), b);
+          return true;
         });
-        downloadBlob(blob, `${exportBaseName}_png.zip`);
+        downloadBlob(blob, buildExportFilename({ text, outputSize, type: 'png', renderMode, archive: true }));
       } else {
-        for (const syl of syllables) {
+        const failedChars = [];
+        for (let index = 0; index < syllables.length; index += 1) {
+          if (cancelRequestedRef.current) {
+            const error = new Error(EXPORT_CANCELLED);
+            error.code = EXPORT_CANCELLED;
+            throw error;
+          }
+          const syl = syllables[index];
           const blob = await exportPNG(syl.char, colors, outputSize, layerOrder, renderMode);
           if (blob) {
-            downloadBlob(blob, `hangul_${syl.char}_${outputSize}px.png`);
-            await delay(200);
-          }
+            downloadBlob(blob, buildExportFilename({
+              text,
+              char: syl.char,
+              outputSize,
+              type: 'png',
+              renderMode,
+            }));
+          } else failedChars.push(syl.char);
+          setExportProgress({ current: index + 1, total: syllables.length });
+          await delay(200);
         }
+        if (failedChars.length > 0) throw new Error(`${t('export.failedChars')}: ${failedChars.join(', ')}`);
       }
       showMessage(t('export.pngStarted'));
     } catch (err) {
+      if (err.code === EXPORT_CANCELLED) {
+        showMessage(t('export.cancelled'));
+        setExporting(null);
+        setExportProgress(null);
+        cancelRequestedRef.current = false;
+        return;
+      }
       console.error(err);
-      showMessage(`오류: ${err.message}`, 'error');
+      showMessage(`${t('export.errorPrefix')}: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder, renderMode]);
+    setExportProgress(null);
+    cancelRequestedRef.current = false;
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode]);
 
   const handleExportSVG = useCallback(async () => {
     if (syllables.length === 0) {
       showMessage(t('export.noHangul'), 'error');
       return;
     }
+    cancelRequestedRef.current = false;
     setExporting('svg');
+    setExportProgress({ current: 0, total: syllables.length });
     try {
       if (syllables.length === 1) {
         const svgStr = exportSVG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
         if (!svgStr) throw new Error('SVG 생성 실패');
         const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-        downloadBlob(blob, `hangul_${syllables[0].char}.svg`);
+        downloadBlob(blob, buildExportFilename({
+          text,
+          char: syllables[0].char,
+          outputSize,
+          type: 'svg',
+          renderMode,
+        }));
+        setExportProgress({ current: 1, total: 1 });
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
           const svgStr = exportSVG(char, colors, outputSize, layerOrder, renderMode);
-          if (svgStr) zip.file(`hangul_${char}.svg`, svgStr);
+          if (!svgStr) return false;
+          zip.file(buildExportFilename({
+            text,
+            char,
+            outputSize,
+            type: 'svg',
+            renderMode,
+          }), svgStr);
+          return true;
         });
-        downloadBlob(blob, `${exportBaseName}_svg.zip`);
+        downloadBlob(blob, buildExportFilename({ text, outputSize, type: 'svg', renderMode, archive: true }));
       } else {
-        for (const syl of syllables) {
+        const failedChars = [];
+        for (let index = 0; index < syllables.length; index += 1) {
+          if (cancelRequestedRef.current) {
+            const error = new Error(EXPORT_CANCELLED);
+            error.code = EXPORT_CANCELLED;
+            throw error;
+          }
+          const syl = syllables[index];
           const svgStr = exportSVG(syl.char, colors, outputSize, layerOrder, renderMode);
           if (svgStr) {
             const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-            downloadBlob(blob, `hangul_${syl.char}.svg`);
-            await delay(150);
-          }
+            downloadBlob(blob, buildExportFilename({
+              text,
+              char: syl.char,
+              outputSize,
+              type: 'svg',
+              renderMode,
+            }));
+          } else failedChars.push(syl.char);
+          setExportProgress({ current: index + 1, total: syllables.length });
+          await delay(150);
         }
+        if (failedChars.length > 0) throw new Error(`${t('export.failedChars')}: ${failedChars.join(', ')}`);
       }
       showMessage(t('export.svgStarted'));
     } catch (err) {
+      if (err.code === EXPORT_CANCELLED) {
+        showMessage(t('export.cancelled'));
+        setExporting(null);
+        setExportProgress(null);
+        cancelRequestedRef.current = false;
+        return;
+      }
       console.error(err);
-      showMessage(`오류: ${err.message}`, 'error');
+      showMessage(`${t('export.errorPrefix')}: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder, renderMode]);
+    setExportProgress(null);
+    cancelRequestedRef.current = false;
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode]);
+
+  const handleCancelExport = useCallback(() => {
+    cancelRequestedRef.current = true;
+  }, []);
 
 
   return (
@@ -228,6 +353,40 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
           {t('export.transparentNote')}
         </span>
       </div>
+
+      {exporting && exportProgress && (
+        <div
+          className="rounded-xl px-3 py-3"
+          style={{ background: 'rgba(124,111,247,0.08)', border: '1px solid rgba(124,111,247,0.24)' }}
+          aria-live="polite"
+        >
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+              {t('export.inProgress')} · {exporting.toUpperCase()}
+            </span>
+            <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>
+              {exportProgress.current} / {exportProgress.total}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-200"
+              style={{
+                width: `${Math.round((exportProgress.current / exportProgress.total) * 100)}%`,
+                background: 'linear-gradient(90deg, var(--accent), #a78bfa)',
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleCancelExport}
+            className="mt-3 text-xs font-semibold transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {t('export.cancel')}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <button

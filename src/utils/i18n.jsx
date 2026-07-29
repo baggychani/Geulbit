@@ -299,6 +299,27 @@ const dict = {
   },
 
   // ─── SyllableRenderer ───
+  'export.inProgress': {
+    ko: '내보내는 중',
+    tr: 'Dışa aktarılıyor',
+  },
+  'export.cancel': {
+    ko: '취소',
+    tr: 'İptal',
+  },
+  'export.cancelled': {
+    ko: '내보내기를 취소했습니다.',
+    tr: 'Dışa aktarma iptal edildi.',
+  },
+  'export.failedChars': {
+    ko: '변환에 실패한 글자',
+    tr: 'Dönüştürülemeyen karakterler',
+  },
+  'export.errorPrefix': {
+    ko: '오류',
+    tr: 'Hata',
+  },
+
   'syllable.copyPNG': {
     ko: 'PNG 복사하기',
     tr: 'PNG Kopyala',

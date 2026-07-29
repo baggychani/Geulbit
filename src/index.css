@@ -346,7 +346,7 @@
 
   .font-variant-toggle {
     grid-template-columns: 1fr 1fr;
-    width: 104px;
+    width: 130px;
   }
 
   .preview-size-toggle {

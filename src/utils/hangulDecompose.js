@@ -69,32 +69,38 @@ export function parseText(text) {
 
 /**
  * 컴포넌트 인덱스(0,1,2)를 자소 유형으로 분류
- * UnDotum composite glyph의 컴포넌트 순서:
- *   - 받침 있는 음절: [초성, 중성, 종성] (3개)
- *   - 받침 없는 음절: [초성, 중성] (2개)
- * 
- * 단, 일부 음절은 중성이 복합(ㅘ=ㅗ+ㅏ)이어서 컴포넌트가 더 많을 수 있음
- * 이 경우 유니코드 분해 결과를 활용하여 분류
+ *
+ * UnDotum composite glyph 실제 순서 (전체 음절 검증):
+ *   - 받침 없음 (2컴포넌트): [초성, 중성]
+ *   - 받침 있음 (3컴포넌트): [초성, 종성, 중성]  ← 중·종이 흔히 아는 순서와 다름
+ *
+ * 종성은 bbox 기준 가장 아래에 오며, 샘플 검증에서 항상 index 1.
  */
 export function classifyComponents(components, decomposed) {
   if (!decomposed || !components || components.length === 0) return [];
-  
-  const result = [];
+
   const { hasJongseong } = decomposed;
-  
-  if (hasJongseong) {
-    // 3개 이상: 마지막이 종성, 첫번째가 초성, 중간이 중성
+  const result = [];
+
+  if (hasJongseong && components.length >= 3) {
+    // [초성, 종성, 중성...]
     for (let i = 0; i < components.length; i++) {
       if (i === 0) {
         result.push({ ...components[i], type: 'choseong' });
-      } else if (i === components.length - 1) {
+      } else if (i === 1) {
         result.push({ ...components[i], type: 'jongseong' });
       } else {
         result.push({ ...components[i], type: 'jungseong' });
       }
     }
+  } else if (hasJongseong && components.length === 2) {
+    // 예외: 종성 있는 음절인데 2개만 온 경우 → 위치(아래=종성)로 판별은
+    // 호출 측 spatial fallback에 맡기고, 여기선 보수적으로 [초, 중] 취급하지 않음.
+    // UnDotum에서는 발생하지 않음. 폴백: 첫=초, 둘=종.
+    result.push({ ...components[0], type: 'choseong' });
+    result.push({ ...components[1], type: 'jongseong' });
   } else {
-    // 2개 이상: 마지막이 중성, 첫번째가 초성
+    // 받침 없음: [초성, 중성...]
     for (let i = 0; i < components.length; i++) {
       if (i === 0) {
         result.push({ ...components[i], type: 'choseong' });
@@ -103,6 +109,6 @@ export function classifyComponents(components, decomposed) {
       }
     }
   }
-  
+
   return result;
 }

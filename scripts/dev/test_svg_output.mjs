@@ -1,15 +1,21 @@
-// test_svg_output.mjs
-// UnDotum composite glyph 분해 → SVG 생성 검증
+// 프로젝트 루트에서: node scripts/dev/test_svg_output.mjs
+// UnDotum composite glyph 분해 → SVG 생성 검증 (출력: scratch/)
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 
-// opentype.js 로드
-const { default: opentype } = await import('./node_modules/opentype.js/dist/opentype.mjs').catch(async () => {
-  const opentypeModule = await import('./node_modules/opentype.js/dist/opentype.js');
-  return opentypeModule;
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const scratchDir = join(root, 'scratch');
+const fontPath = join(root, 'public', 'UnDotum.ttf');
+const opentypeMjs = join(root, 'node_modules', 'opentype.js', 'dist', 'opentype.mjs');
+const opentypeJs = join(root, 'node_modules', 'opentype.js', 'dist', 'opentype.js');
+
+const { default: opentype } = await import(pathToFileURL(opentypeMjs).href).catch(async () => {
+  return import(pathToFileURL(opentypeJs).href);
 });
 
-const buf = readFileSync('./UnDotum.ttf');
+const buf = readFileSync(fontPath);
 const font = opentype.parse(buf.buffer);
 
 const FONT_SIZE = 200;
@@ -34,19 +40,18 @@ function getColorType(componentIndex, totalComponents) {
 function buildSVG(char, colors, outputSize = 300) {
   const glyph = font.charToGlyph(char);
   console.log(`\n'${char}': isComposite=${glyph.numberOfContours === -1}, components=${glyph.components?.length}`);
-  
+
   if (glyph.numberOfContours !== -1 || !glyph.components?.length) {
     const path = glyph.getPath(0, FONT_SIZE, FONT_SIZE);
     const bb = path.getBoundingBox();
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="${bb.x1} ${bb.y1} ${bb.x2-bb.x1} ${bb.y2-bb.y1}">
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="${bb.x1} ${bb.y1} ${bb.x2 - bb.x1} ${bb.y2 - bb.y1}">
   <path fill="${colors.choseong}" d="${path.toPathData(3)}"/>
 </svg>`;
   }
-  
+
   const colorMap = { choseong: colors.choseong, jungseong: colors.jungseong, jongseong: colors.jongseong };
   const n = glyph.components.length;
-  
-  // 전체 bounding box 계산
+
   const fullPath = glyph.getPath(0, FONT_SIZE, FONT_SIZE);
   const bb = fullPath.getBoundingBox();
   const pad = FONT_SIZE * 0.04;
@@ -55,14 +60,16 @@ function buildSVG(char, colors, outputSize = 300) {
   const vw = (bb.x2 - bb.x1 + pad * 2).toFixed(1);
   const vh = (bb.y2 - bb.y1 + pad * 2).toFixed(1);
 
-  const paths = glyph.components.map((comp, i) => {
-    const type = getColorType(i, n);
-    const childGlyph = font.glyphs.get(comp.glyphIndex);
-    const path = childGlyph.getPath(0, FONT_SIZE, FONT_SIZE);
-    const pd = path.toPathData(3);
-    console.log(`  comp[${i}] type=${type} glyphIndex=${comp.glyphIndex} name=${childGlyph.name} pathLen=${pd.length}`);
-    return `  <path fill="${colorMap[type]}" d="${pd}"/>`;
-  }).join('\n');
+  const paths = glyph.components
+    .map((comp, i) => {
+      const type = getColorType(i, n);
+      const childGlyph = font.glyphs.get(comp.glyphIndex);
+      const path = childGlyph.getPath(0, FONT_SIZE, FONT_SIZE);
+      const pd = path.toPathData(3);
+      console.log(`  comp[${i}] type=${type} glyphIndex=${comp.glyphIndex} name=${childGlyph.name} pathLen=${pd.length}`);
+      return `  <path fill="${colorMap[type]}" d="${pd}"/>`;
+    })
+    .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="${vx} ${vy} ${vw} ${vh}">
@@ -71,11 +78,13 @@ ${paths}
 </svg>`;
 }
 
+mkdirSync(scratchDir, { recursive: true });
+
 for (const { char, colors } of testWords) {
   const svg = buildSVG(char, colors);
-  const filename = `test_output_${char}.svg`;
+  const filename = join(scratchDir, `test_output_${char}.svg`);
   writeFileSync(filename, svg, 'utf8');
   console.log(`  → 저장: ${filename}`);
 }
 
-console.log('\n✅ SVG 파일 생성 완료! test_output_*.svg 파일을 브라우저로 열어 확인하세요.');
+console.log('\n✅ SVG 파일 생성 완료! scratch/test_output_*.svg 파일을 브라우저로 열어 확인하세요.');

@@ -12,40 +12,17 @@ export default function TemplateSelector({ selectedId, onSelect }) {
       {COLOR_TEMPLATES.map(template => (
         <button
           key={template.id}
+          type="button"
           onClick={() => onSelect(template)}
           className={`template-card ${selectedId === template.id ? 'selected' : ''}`}
           id={`template-${template.id}`}
           title={template.name}
         >
-          {/* 색상 점 3개 미리보기 */}
-          <div className="flex gap-1 flex-shrink-0">
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: template.colors.choseong,
-                flexShrink: 0,
-              }}
-            />
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: template.colors.jungseong,
-                flexShrink: 0,
-              }}
-            />
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: template.colors.jongseong,
-                flexShrink: 0,
-              }}
-            />
+          {/* 초·중·종 색상 스트립 */}
+          <div className="template-swatch" aria-hidden>
+            <span style={{ background: template.colors.choseong }} />
+            <span style={{ background: template.colors.jungseong }} />
+            <span style={{ background: template.colors.jongseong }} />
           </div>
           <span className="text-xs font-medium truncate">{template.name}</span>
           {selectedId === template.id && (

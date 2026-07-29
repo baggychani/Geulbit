@@ -46,6 +46,71 @@
     overflow-x: hidden;
   }
 
+  .app-shell {
+    position: relative;
+    min-height: 100vh;
+    isolation: isolate;
+  }
+
+  .app-bg-decoration {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .app-bg-decoration::before,
+  .app-bg-decoration::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(72px);
+    opacity: 0.55;
+  }
+
+  .app-bg-decoration::before {
+    width: min(52vw, 520px);
+    height: min(52vw, 520px);
+    top: -12%;
+    right: -8%;
+    background: radial-gradient(circle, rgba(124, 111, 247, 0.45) 0%, transparent 70%);
+  }
+
+  .app-bg-decoration::after {
+    width: min(48vw, 480px);
+    height: min(48vw, 480px);
+    bottom: -10%;
+    left: -6%;
+    background: radial-gradient(circle, rgba(236, 72, 153, 0.28) 0%, transparent 70%);
+  }
+
+  .app-bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124, 111, 247, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124, 111, 247, 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 100%);
+  }
+
+  :root.light .app-bg-decoration::before {
+    background: radial-gradient(circle, rgba(101, 87, 240, 0.22) 0%, transparent 70%);
+    opacity: 0.85;
+  }
+
+  :root.light .app-bg-decoration::after {
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.15) 0%, transparent 70%);
+    opacity: 0.85;
+  }
+
+  :root.light .app-bg-grid {
+    background-image:
+      linear-gradient(rgba(101, 87, 240, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(101, 87, 240, 0.06) 1px, transparent 1px);
+  }
+
   ::selection {
     background: var(--accent);
     color: white;
@@ -250,6 +315,185 @@
     color: var(--text-primary);
   }
 
+  .template-swatch {
+    display: flex;
+    width: 32px;
+    height: 18px;
+    border-radius: 5px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  .template-swatch span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .font-variant-toggle,
+  .preview-size-toggle {
+    position: relative;
+    display: grid;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    padding: 3px;
+    box-sizing: border-box;
+  }
+
+  .font-variant-toggle {
+    grid-template-columns: 1fr 1fr;
+    width: 104px;
+  }
+
+  .preview-size-toggle {
+    grid-template-columns: 1fr 1fr 1fr;
+    width: 120px;
+  }
+
+  .font-variant-toggle .segmented-thumb,
+  .preview-size-toggle .segmented-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    height: calc(100% - 6px);
+    border-radius: 7px;
+    background: linear-gradient(135deg, rgba(124, 111, 247, 0.45), rgba(155, 89, 213, 0.35));
+    transition: transform 0.28s cubic-bezier(0.34, 1.2, 0.64, 1);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .font-variant-toggle .segmented-thumb {
+    width: calc(50% - 3px);
+  }
+
+  .preview-size-toggle .segmented-thumb {
+    width: calc(33.333% - 2px);
+  }
+
+  .font-variant-toggle[data-active="bold"] .segmented-thumb {
+    transform: translateX(100%);
+  }
+
+  .preview-size-toggle[data-active="M"] .segmented-thumb {
+    transform: translateX(100%);
+  }
+
+  .preview-size-toggle[data-active="L"] .segmented-thumb {
+    transform: translateX(200%);
+  }
+
+  .font-variant-toggle button,
+  .preview-size-toggle button {
+    position: relative;
+    z-index: 1;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+    border-radius: 7px;
+  }
+
+  .font-variant-toggle button.active,
+  .preview-size-toggle button.active {
+    color: var(--text-primary);
+  }
+
+  .font-variant-toggle button:not(.active):hover,
+  .preview-size-toggle button:not(.active):hover {
+    color: var(--text-secondary);
+  }
+
+  .syllable-cell {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .syllable-glyph-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .syllable-glyph-frame {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: width 0.28s cubic-bezier(0.34, 1.05, 0.64, 1),
+                height 0.28s cubic-bezier(0.34, 1.05, 0.64, 1);
+  }
+
+  .preview-stage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 24px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
+    /* L 셀 + 라벨 여유 — 크기 전환 시 높이 출렁임 방지 */
+    min-height: 320px;
+  }
+
+  .font-status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 200px;
+    height: 36px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .font-status-pill .font-status-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .font-status-pill .font-status-meta {
+    width: 52px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
   .preview-bg-checker {
     background-image: repeating-conic-gradient(#2a2d40 0% 25%, #1e2130 0% 50%);
     background-size: 16px 16px;
@@ -285,7 +529,8 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #22c55e;
+    background: #94a3b8;
+    flex-shrink: 0;
     animation: pulse 2s infinite;
   }
 

@@ -2,34 +2,56 @@
  * fontParser.js
  * opentype.js를 사용하여 UnDotum 폰트의 복합 글리프를 분해하고
  * 초성/중성/종성별 SVG path를 추출합니다.
- * 
+ *
  * === UnDotum 폰트 검증 결과 ===
- * - 모든 한글 음절이 composite glyph (numberOfContours === -1)
- * - components[] 배열에 dx=0, dy=0 (오프셋 없음)
- * - 각 자소 글리프가 이미 음절 좌표계에 절대 배치되어 있음
- * - 받침 있음: 컴포넌트 3개, 받침 없음: 컴포넌트 2개
- * - 겹받침도 3개 컴포넌트로 통합 (겹받침 = 하나의 자소 글리프)
- * → transform 변환 불필요! 각 컴포넌트 path를 그대로 합치면 됨
+ * - 모든 한글 음절이 composite glyph
+ * - components[]: dx=0, dy=0 (오프셋 없음)
+ * - 받침 없음(2): [초성, 중성]
+ * - 받침 있음(3): [초성, 종성, 중성]  ← 중·종 순서가 일반적인 가정과 다름
+ * - 겹받침도 종성 1컴포넌트로 통합
  */
 
 import opentype from 'opentype.js';
 import { decomposeHangul, classifyComponents } from './hangulDecompose';
 
 let loadedFont = null;
+let loadedFontUrl = null;
+/** URL → 파싱된 폰트 (전환 시 재 fetch/parse 방지) */
+const fontCache = new Map();
+
+/** 번들 폰트 (public/) */
+export const FONT_VARIANTS = {
+  regular: {
+    url: '/UnDotum.ttf',
+    label: '일반',
+    displayName: 'UnDotum',
+  },
+  bold: {
+    url: '/UnDotumBold.ttf',
+    label: '굵게',
+    displayName: 'UnDotum Bold',
+  },
+};
 
 /**
- * UnDotum 폰트 로드 (싱글톤)
+ * 폰트 로드 후 캐시에 보관. 이미 있으면 캐시 반환.
  */
-export async function loadFont(fontUrl = '/UnDotum.ttf') {
-  if (loadedFont) return loadedFont;
+export async function loadFont(fontUrl = FONT_VARIANTS.regular.url, { force = false } = {}) {
+  if (!force && fontCache.has(fontUrl)) {
+    loadedFont = fontCache.get(fontUrl);
+    loadedFontUrl = fontUrl;
+    return loadedFont;
+  }
 
   const response = await fetch(fontUrl);
   if (!response.ok) throw new Error(`폰트 파일 로드 실패 (${response.status}): ${fontUrl}`);
   const buffer = await response.arrayBuffer();
   const font = opentype.parse(buffer);
+  fontCache.set(fontUrl, font);
   loadedFont = font;
+  loadedFontUrl = fontUrl;
 
-  console.log('[FontParser] UnDotum 로드 완료:', {
+  console.log('[FontParser] 폰트 로드 완료:', fontUrl, {
     numGlyphs: font.numGlyphs,
     unitsPerEm: font.unitsPerEm,
   });
@@ -37,12 +59,24 @@ export async function loadFont(fontUrl = '/UnDotum.ttf') {
 }
 
 /**
- * 외부 업로드 폰트 파일(ArrayBuffer) 로드
+ * 캐시된 폰트를 활성 폰트로 즉시 전환 (네트워크/파싱 없음)
  */
-export async function loadFontFromBuffer(arrayBuffer) {
-  const font = opentype.parse(arrayBuffer);
+export function setActiveFont(fontUrl) {
+  const font = fontCache.get(fontUrl);
+  if (!font) {
+    throw new Error(`폰트가 아직 캐시되지 않음: ${fontUrl}`);
+  }
   loadedFont = font;
+  loadedFontUrl = fontUrl;
   return font;
+}
+
+/**
+ * 번들 폰트 전부 미리 로드
+ */
+export async function preloadBundledFonts() {
+  const urls = Object.values(FONT_VARIANTS).map(v => v.url);
+  await Promise.all(urls.map(url => loadFont(url)));
 }
 
 /**
@@ -73,8 +107,11 @@ export function extractJamoPaths(char, fontSize = 200) {
   const glyph = font.charToGlyph(char);
   if (!glyph) return null;
 
-  // ✅ 복합 글리프: 컴포넌트별 분리
-  if (glyph.numberOfContours === -1 && glyph.components?.length > 0) {
+  // opentype.js는 path 접근 전에 composite 메타가 비어 있을 수 있음
+  void glyph.path;
+
+  // 복합 글리프: 컴포넌트별 분리
+  if (glyph.components?.length > 0) {
     const classified = classifyComponents(glyph.components, decomposed);
     const result = [];
 
@@ -120,6 +157,7 @@ export function getGlyphBoundingBox(char, fontSize = 200) {
   const glyph = font.charToGlyph(char);
   if (!glyph) return null;
   try {
+    void glyph.path;
     return glyph.getPath(0, fontSize, fontSize).getBoundingBox();
   } catch {
     return null;
@@ -141,7 +179,7 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200) {
   const colorMap = {
     choseong:  colors?.choseong  || '#E53E3E',
     jungseong: colors?.jungseong || '#3182CE',
-    jongseong: colors?.jongseong || '#38A169',
+    jongseong: colors?.jongseong || '#718096',
   };
 
   let viewBox = `0 0 ${fontSize} ${fontSize}`;

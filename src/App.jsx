@@ -3,14 +3,15 @@
  * 한글 모아쓰기 색채 분리 도구 — 메인 앱
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { loadFont, loadFontFromBuffer, getFont } from './utils/fontParser';
+import React, { useState, useEffect, useCallback } from 'react';
+import { preloadBundledFonts, setActiveFont, FONT_VARIANTS } from './utils/fontParser';
 import { parseText } from './utils/hangulDecompose';
-import { DEFAULT_COLORS, COLOR_TEMPLATES } from './utils/colorTemplates';
+import { DEFAULT_COLORS, PREVIEW_SIZES } from './utils/colorTemplates';
 import SyllableRenderer from './components/SyllableRenderer';
 import ColorPicker from './components/ColorPicker';
 import TemplateSelector from './components/TemplateSelector';
 import ExportPanel from './components/ExportPanel';
+import LogoMark from './components/LogoMark';
 
 // 예시 텍스트
 const EXAMPLE_TEXTS = ['한글', '사랑', '학교', '봄날'];
@@ -20,42 +21,71 @@ export default function App() {
   const [fontError, setFontError] = useState(null);
   const [fontLoading, setFontLoading] = useState(true);
   const [fontInfo, setFontInfo] = useState(null);
+  const [fontVariant, setFontVariant] = useState('regular');
+  const [fontRevision, setFontRevision] = useState(0);
+  const [fontsPreloaded, setFontsPreloaded] = useState(false);
 
   const [text, setText] = useState('한글');
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
 
   const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
-  const [previewSize, setPreviewSize] = useState(160);
+  const [previewSizeId, setPreviewSizeId] = useState('M');
   const [isDark, setIsDark] = useState(false);
-
-  const fileInputRef = useRef(null);
 
   // 다크/라이트 모드 적용
   useEffect(() => {
     document.documentElement.classList.toggle('light', !isDark);
   }, [isDark]);
 
-  // 폰트 로드
+  // 일반·굵게 폰트 모두 미리 로드 (최초 1회)
   useEffect(() => {
-    async function initFont() {
+    let cancelled = false;
+
+    async function initFonts() {
       setFontLoading(true);
+      setFontError(null);
       try {
-        const font = await loadFont('/UnDotum.ttf');
-        setFontInfo({
-          name: font.names?.postScriptName?.en || 'UnDotum',
-          numGlyphs: font.numGlyphs,
-          unitsPerEm: font.unitsPerEm,
-        });
+        await preloadBundledFonts();
+        if (cancelled) return;
+        // Promise.all 완료 순서와 무관하게 현재 굵기로 고정
+        setActiveFont(FONT_VARIANTS.regular.url);
+        setFontsPreloaded(true);
         setFontReady(true);
       } catch (err) {
+        if (cancelled) return;
         console.error('[App] 폰트 로드 실패:', err);
         setFontError(err.message);
+        setFontReady(false);
       }
-      setFontLoading(false);
+      if (!cancelled) setFontLoading(false);
     }
-    initFont();
+
+    initFonts();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // 굵기 전환: 캐시된 폰트만 활성화 (네트워크/로딩 UI 없음)
+  useEffect(() => {
+    if (!fontsPreloaded) return;
+    const variant = FONT_VARIANTS[fontVariant];
+    try {
+      const font = setActiveFont(variant.url);
+      setFontInfo({
+        name: variant.displayName,
+        numGlyphs: font.numGlyphs,
+        unitsPerEm: font.unitsPerEm,
+      });
+      setFontRevision(r => r + 1);
+      setFontError(null);
+      setFontReady(true);
+    } catch (err) {
+      console.error('[App] 폰트 전환 실패:', err);
+      setFontError(err.message);
+    }
+  }, [fontVariant, fontsPreloaded]);
 
   const handleTemplateSelect = useCallback((template) => {
     setColors(template.colors);
@@ -67,42 +97,19 @@ export default function App() {
     setSelectedTemplate(null); // 템플릿 선택 해제
   }, []);
 
-  const handleFontUpload = useCallback(async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFontLoading(true);
-    setFontError(null);
-    try {
-      const buffer = await file.arrayBuffer();
-      const font = await loadFontFromBuffer(buffer);
-      setFontInfo({
-        name: font.names?.postScriptName?.en || file.name,
-        numGlyphs: font.numGlyphs,
-        unitsPerEm: font.unitsPerEm,
-      });
-      setFontReady(true);
-      // 텍스트 재렌더링 트리거
-      setText(prev => prev);
-    } catch (err) {
-      setFontError(`폰트 로드 실패: ${err.message}`);
-    }
-    setFontLoading(false);
-  }, []);
-
   // 한글만 있는지 확인
   const parsedChars = parseText(text);
   const hangulChars = parsedChars.filter(c => c.isHangul);
   const hasHangul = hangulChars.length > 0;
-
-  // 미리보기 크기 조절
-  const previewSizes = [
-    { label: 'S', value: 100 },
-    { label: 'M', value: 160 },
-    { label: 'L', value: 220 },
-  ];
+  const previewSize = PREVIEW_SIZES.find(s => s.id === previewSizeId)?.value ?? 160;
+  const activeVariant = FONT_VARIANTS[fontVariant];
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+    <div className="app-shell min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <div className="app-bg-decoration" aria-hidden>
+        <div className="app-bg-grid" />
+      </div>
+
       {/* 헤더 */}
       <header
         style={{
@@ -115,28 +122,11 @@ export default function App() {
           transition: 'background 0.3s ease',
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between relative z-10">
           {/* 왼쪽: 로고 + 타이틀 */}
-          <div className="flex items-center gap-3">
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: 'linear-gradient(135deg, #7c6ff7, #9b59d5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                fontWeight: 700,
-                color: 'white',
-                fontFamily: 'serif',
-                flexShrink: 0,
-              }}
-            >
-              가
-            </div>
-            <div>
+          <div className="flex items-center gap-3 min-w-0">
+            <LogoMark size={36} />
+            <div className="min-w-0">
               <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)', lineHeight: 1.2 }}>
                 글빛 — 한글 팔레트
               </h1>
@@ -146,25 +136,56 @@ export default function App() {
             </div>
           </div>
 
-          {/* 오른쪽: 제작자 + 다크모드 토글 + 폰트 상태 + 업로드 */}
-          <div className="flex items-center gap-3">
-            {/* 제작자 */}
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                textAlign: 'right',
-                lineHeight: 1.5,
-                paddingRight: 4,
-                borderRight: '1px solid var(--border)',
-                marginRight: 4,
-              }}
-            >
-              <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Woo Jiin · Bae Gichan</div>
-              <div>© 2026</div>
+          {/* 오른쪽: 폰트 상태 | 굵기 | 테마 — 고정 폭으로 밀림 방지 */}
+          <div className="header-controls">
+            <div className="font-status-pill" title={fontError || undefined}>
+              {fontLoading ? (
+                <>
+                  <div className="shimmer w-2 h-2 rounded-full flex-shrink-0" />
+                  <span className="font-status-name" style={{ color: 'var(--text-muted)' }}>로딩 중</span>
+                  <span className="font-status-meta">…</span>
+                </>
+              ) : fontReady ? (
+                <>
+                  <div className="pulse-dot" />
+                  <span className="font-status-name">{fontInfo?.name || activeVariant.displayName}</span>
+                  <span className="font-status-meta" title={`${fontInfo?.numGlyphs?.toLocaleString() ?? ''} 글리프`}>
+                    {fontInfo?.numGlyphs != null
+                      ? fontInfo.numGlyphs.toLocaleString()
+                      : ''}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div className="pulse-dot" style={{ background: '#f87171', animation: 'none' }} />
+                  <span className="font-status-name" style={{ color: '#f87171' }}>폰트 오류</span>
+                  <span className="font-status-meta" />
+                </>
+              )}
             </div>
 
-            {/* 다크/라이트 모드 토글 */}
+            <div
+              className="font-variant-toggle"
+              role="group"
+              aria-label="폰트 굵기"
+              data-active={fontVariant}
+            >
+              <div className="segmented-thumb" aria-hidden />
+              {Object.entries(FONT_VARIANTS).map(([id, variant]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={fontVariant === id ? 'active' : ''}
+                  disabled={!fontsPreloaded}
+                  onClick={() => setFontVariant(id)}
+                  title={`${variant.label} (${variant.displayName})`}
+                  id={`font-variant-${id}`}
+                >
+                  {variant.label}
+                </button>
+              ))}
+            </div>
+
             <button
               id="theme-toggle-btn"
               onClick={() => setIsDark(d => !d)}
@@ -183,56 +204,17 @@ export default function App() {
                 transition: 'background 0.2s, transform 0.2s',
                 flexShrink: 0,
               }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
               {isDark ? '☀️' : '🌙'}
             </button>
-            {/* 폰트 상태 */}
-            {fontLoading ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                <div className="shimmer w-4 h-4 rounded-full" />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>폰트 로딩 중...</span>
-              </div>
-            ) : fontReady ? (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--bg-card)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                <div className="pulse-dot" />
-                <span className="text-xs font-medium" style={{ color: '#4ade80' }}>
-                  {fontInfo?.name}
-                </span>
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {fontInfo?.numGlyphs?.toLocaleString()}글리프
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                <span style={{ color: '#f87171', fontSize: 12 }}>⚠ 폰트 오류</span>
-              </div>
-            )}
-
-            {/* 폰트 업로드 버튼 */}
-            <button
-              className="btn-secondary"
-              style={{ padding: '6px 12px', fontSize: 12 }}
-              onClick={() => fileInputRef.current?.click()}
-              title="다른 TTF 폰트 파일 업로드"
-              id="upload-font-btn"
-            >
-              📂 폰트 교체
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".ttf,.otf,.woff,.woff2"
-              style={{ display: 'none' }}
-              onChange={handleFontUpload}
-            />
           </div>
         </div>
       </header>
 
       {/* 메인 레이아웃 */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8 relative z-10">
         <div className="flex gap-6" style={{ alignItems: 'flex-start' }}>
 
           {/* ─── 왼쪽 패널 ─── */}
@@ -243,7 +225,6 @@ export default function App() {
             {/* 텍스트 입력 */}
             <div className="glass-card p-5">
               <div className="section-title">
-                <span>✏️</span>
                 <span>글자 입력</span>
               </div>
 
@@ -257,7 +238,7 @@ export default function App() {
                   height: 100,
                   resize: 'vertical',
                   fontFamily: 'Noto Sans KR, sans-serif',
-                  fontSize: 22,
+                  fontSize: 15,
                   letterSpacing: '0.05em',
                   lineHeight: 1.6,
                 }}
@@ -318,14 +299,13 @@ export default function App() {
                 style={{ borderBottom: '1px solid var(--border)' }}
               >
                 {[
-                  { id: 'color', label: '🎨 색상', title: '초성/중성/종성 색상 설정' },
-                  { id: 'template', label: '🗂 템플릿', title: '색상 템플릿 선택' },
-                  { id: 'export', label: '💾 내보내기', title: '이미지 다운로드' },
+                  { id: 'color', label: '색상' },
+                  { id: 'template', label: '템플릿' },
+                  { id: 'export', label: '내보내기' },
                 ].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    title={tab.title}
                     id={`tab-${tab.id}`}
                     style={{
                       flex: 1,
@@ -356,9 +336,6 @@ export default function App() {
                 )}
                 {activeTab === 'template' && (
                   <div className="fade-in">
-                    <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-                      미리 정의된 색 조합을 선택하세요
-                    </p>
                     <TemplateSelector
                       selectedId={selectedTemplate}
                       onSelect={handleTemplateSelect}
@@ -380,7 +357,6 @@ export default function App() {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="section-title" style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0 }}>
-                  <span>👁️</span>
                   <span>미리보기</span>
                   {hasHangul && (
                     <span className="badge">{hangulChars.length}음절</span>
@@ -388,14 +364,20 @@ export default function App() {
                 </div>
 
                 {/* 미리보기 크기 */}
-                <div className="flex gap-1">
-                  {previewSizes.map(s => (
+                <div
+                  className="preview-size-toggle"
+                  role="group"
+                  aria-label="미리보기 크기"
+                  data-active={previewSizeId}
+                >
+                  <div className="segmented-thumb" aria-hidden />
+                  {PREVIEW_SIZES.map(s => (
                     <button
-                      key={s.value}
-                      onClick={() => setPreviewSize(s.value)}
-                      className={previewSize === s.value ? 'btn-primary' : 'btn-secondary'}
-                      style={{ padding: '4px 10px', fontSize: 11, minWidth: 32 }}
-                      id={`preview-size-${s.label}`}
+                      key={s.id}
+                      type="button"
+                      className={previewSizeId === s.id ? 'active' : ''}
+                      onClick={() => setPreviewSizeId(s.id)}
+                      id={`preview-size-${s.id}`}
                       title={`미리보기 크기 ${s.label}`}
                     >
                       {s.label}
@@ -407,8 +389,8 @@ export default function App() {
               {/* 색상 범례 */}
               <div className="flex gap-4 mb-5">
                 {[
-                  { label: '초성 (첫 자음)', color: colors.choseong },
-                  { label: '중성 (모음)', color: colors.jungseong },
+                  { label: '초성', color: colors.choseong },
+                  { label: '중성', color: colors.jungseong },
                   { label: '종성 (받침)', color: colors.jongseong },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-2">
@@ -437,15 +419,8 @@ export default function App() {
                   <div className="text-center">
                     <div className="text-2xl mb-2">⚠️</div>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {fontError || '폰트를 로드할 수 없습니다.'}
+                      {fontError || '폰트를 불러올 수 없습니다.'}
                     </p>
-                    <button
-                      className="btn-secondary mt-3"
-                      style={{ fontSize: 12 }}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      폰트 업로드
-                    </button>
                   </div>
                 </div>
               )}
@@ -457,7 +432,7 @@ export default function App() {
                 >
                   <div className="shimmer w-24 h-24 rounded-xl" />
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    UnDotum 폰트 로딩 중...
+                    폰트 로딩 중...
                   </p>
                 </div>
               )}
@@ -470,23 +445,15 @@ export default function App() {
                       style={{ background: 'var(--bg-input)', border: '1px dashed var(--border-light)' }}
                     >
                       <div className="text-center">
-                        <div className="text-3xl mb-3">✏️</div>
                         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          왼쪽 입력창에 한글을 입력하세요
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
-                          받침 있는 글자도 완벽히 분리됩니다
+                          왼쪽에 한글을 입력하세요
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div
-                      className="flex flex-wrap gap-6 p-6 rounded-xl"
+                      className="preview-stage"
                       style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        minHeight: 220,
-                        alignItems: 'center',
                         justifyContent: hangulChars.length === 1 ? 'center' : 'flex-start',
                       }}
                     >
@@ -496,6 +463,7 @@ export default function App() {
                           char={item.char}
                           colors={colors}
                           displaySize={previewSize}
+                          fontRevision={fontRevision}
                         />
                       ))}
                     </div>
@@ -508,8 +476,7 @@ export default function App() {
             {fontReady && hasHangul && (
               <div className="glass-card p-5">
                 <div className="section-title">
-                  <span>🔬</span>
-                  <span>음절 분석 정보</span>
+                  <span>음절 분석</span>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {hangulChars.map((item, i) => {
@@ -518,7 +485,7 @@ export default function App() {
                     return (
                       <div
                         key={i}
-                        className="flex items-center gap-4 p-3 rounded-xl fade-in"
+                        className="flex items-center gap-4 p-3 rounded-xl"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
                       >
                         {/* 글자 */}
@@ -605,7 +572,6 @@ export default function App() {
             {!hasHangul && !fontLoading && (
               <div className="glass-card p-5">
                 <div className="section-title">
-                  <span>💡</span>
                   <span>사용 방법</span>
                 </div>
                 <ol className="flex flex-col gap-2">
@@ -645,14 +611,13 @@ export default function App() {
         </div>
       </main>
 
-      {/* 푸터 */}
       <footer
-        className="text-center py-6 mt-8"
+        className="text-center py-6 mt-4 relative z-10"
         style={{ borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 12 }}
       >
-        한글 모아쓰기 색채 분리 도구 · UnDotum 폰트 기반 · 교사 전용
+        Woo Jiin · Bae Gichan
         <span className="mx-2">·</span>
-        복합 글리프 직접 분해 방식 (opentype.js)
+        © 2026
       </footer>
     </div>
   );

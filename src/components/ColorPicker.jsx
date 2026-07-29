@@ -6,12 +6,12 @@
  * - 색상 미리보기 스와치
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 const JAMO_LABELS = {
-  choseong:  { label: '초성', desc: '첫 자음', icon: '①' },
-  jungseong: { label: '중성', desc: '모음',    icon: '②' },
-  jongseong: { label: '종성', desc: '받침',    icon: '③' },
+  choseong: { label: '초성' },
+  jungseong: { label: '중성' },
+  jongseong: { label: '종성', desc: '받침' },
 };
 
 // 사전 정의 빠른 선택 색상
@@ -51,8 +51,7 @@ export default function ColorPicker({ colors, onChange }) {
     onChange({ ...colors, [type]: color });
   }, [colors, onChange]);
 
-  // 색상이 외부에서 변경되면 동기화
-  React.useEffect(() => {
+  useEffect(() => {
     setHexInputs({
       choseong: colors.choseong,
       jungseong: colors.jungseong,
@@ -73,9 +72,11 @@ export default function ColorPicker({ colors, onChange }) {
             <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
               {info.label}
             </span>
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {info.desc}
-            </span>
+            {info.desc && (
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                ({info.desc})
+              </span>
+            )}
           </div>
 
           {/* 색상 입력 행 */}

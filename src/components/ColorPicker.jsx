@@ -8,12 +8,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { LAYER_ORDERS } from '../utils/fontParser';
-
-const JAMO_LABELS = {
-  choseong: { label: '초성' },
-  jungseong: { label: '중성' },
-  jongseong: { label: '종성', desc: '받침' },
-};
+import { useT } from '../utils/i18n';
 
 // 사전 정의 빠른 선택 색상
 const QUICK_COLORS = [
@@ -23,6 +18,14 @@ const QUICK_COLORS = [
 ];
 
 export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseong_top', onLayerOrderChange }) {
+  const t = useT();
+
+  const JAMO_LABELS = {
+    choseong: { label: t('color.choseong') },
+    jungseong: { label: t('color.jungseong') },
+    jongseong: { label: t('color.jongseong'), desc: t('color.jongseongDesc') },
+  };
+
   const [hexInputs, setHexInputs] = useState({
     choseong: colors.choseong,
     jungseong: colors.jungseong,
@@ -85,7 +88,7 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
             {/* 네이티브 color picker */}
             <label
               className="cursor-pointer flex-shrink-0"
-              title="색상 선택"
+              title={t('color.selectColor')}
               style={{
                 width: 36,
                 height: 36,
@@ -163,7 +166,7 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
       {/* 레이어 겹침 순서 (Z-Order) */}
       <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-2">
         <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
-          획 겹침 순서 (Z-Order)
+          {t('zorder.title')}
         </span>
         <div className="flex flex-col gap-1.5">
           {Object.values(LAYER_ORDERS).map((opt) => (
@@ -184,7 +187,7 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
                 onChange={() => onLayerOrderChange && onLayerOrderChange(opt.id)}
                 className="w-3.5 h-3.5"
               />
-              <span className="font-semibold">{opt.label}</span>
+              <span className="font-semibold">{t('zorder.' + opt.id)}</span>
             </label>
           ))}
         </div>

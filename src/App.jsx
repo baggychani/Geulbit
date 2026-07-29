@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { preloadBundledFonts, setActiveFont, FONT_VARIANTS, LAYER_ORDERS } from './utils/fontParser';
 import { parseText } from './utils/hangulDecompose';
 import { DEFAULT_COLORS, PREVIEW_SIZES } from './utils/colorTemplates';
+import { useT, useLang } from './utils/i18n';
 import SyllableRenderer from './components/SyllableRenderer';
 import ColorPicker from './components/ColorPicker';
 import TemplateSelector from './components/TemplateSelector';
@@ -17,6 +18,8 @@ import LogoMark from './components/LogoMark';
 const EXAMPLE_TEXTS = ['한글', '사랑', '학교', '봄날'];
 
 export default function App() {
+  const t = useT();
+  const [lang, setLang] = useLang();
   const [fontReady, setFontReady] = useState(false);
   const [fontError, setFontError] = useState(null);
   const [fontLoading, setFontLoading] = useState(true);
@@ -131,10 +134,10 @@ export default function App() {
             <LogoMark size={36} />
             <div className="min-w-0">
               <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                글빛 — 한글 팔레트
+                {t('header.title')}
               </h1>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                초성·중성·종성 컬러 이미지 스튜디오
+                {t('header.subtitle')}
               </p>
             </div>
           </div>
@@ -145,14 +148,14 @@ export default function App() {
               {fontLoading ? (
                 <>
                   <div className="shimmer w-2 h-2 rounded-full flex-shrink-0" />
-                  <span className="font-status-name" style={{ color: 'var(--text-muted)' }}>로딩 중</span>
+                  <span className="font-status-name" style={{ color: 'var(--text-muted)' }}>{t('font.loading')}</span>
                   <span className="font-status-meta">…</span>
                 </>
               ) : fontReady ? (
                 <>
                   <div className="pulse-dot" />
                   <span className="font-status-name">{fontInfo?.name || activeVariant.displayName}</span>
-                  <span className="font-status-meta" title={`${fontInfo?.numGlyphs?.toLocaleString() ?? ''} 글리프`}>
+                  <span className="font-status-meta" title={`${fontInfo?.numGlyphs?.toLocaleString() ?? ''} glyphs`}>
                     {fontInfo?.numGlyphs != null
                       ? fontInfo.numGlyphs.toLocaleString()
                       : ''}
@@ -161,7 +164,7 @@ export default function App() {
               ) : (
                 <>
                   <div className="pulse-dot" style={{ background: '#f87171', animation: 'none' }} />
-                  <span className="font-status-name" style={{ color: '#f87171' }}>폰트 오류</span>
+                  <span className="font-status-name" style={{ color: '#f87171' }}>{t('font.error')}</span>
                   <span className="font-status-meta" />
                 </>
               )}
@@ -170,7 +173,7 @@ export default function App() {
             <div
               className="font-variant-toggle"
               role="group"
-              aria-label="폰트 굵기"
+              aria-label="Font weight"
               data-active={fontVariant}
             >
               <div className="segmented-thumb" aria-hidden />
@@ -181,10 +184,10 @@ export default function App() {
                   className={fontVariant === id ? 'active' : ''}
                   disabled={!fontsPreloaded}
                   onClick={() => setFontVariant(id)}
-                  title={`${variant.label} (${variant.displayName})`}
+                  title={`${t('font.' + id)} (${variant.displayName})`}
                   id={`font-variant-${id}`}
                 >
-                  {variant.label}
+                  {t('font.' + id)}
                 </button>
               ))}
             </div>
@@ -192,7 +195,7 @@ export default function App() {
             <button
               id="theme-toggle-btn"
               onClick={() => setIsDark(d => !d)}
-              title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+              title={isDark ? t('theme.toLight') : t('theme.toDark')}
               style={{
                 width: 36,
                 height: 36,
@@ -212,6 +215,33 @@ export default function App() {
             >
               {isDark ? '☀️' : '🌙'}
             </button>
+
+            <button
+              id="lang-toggle-btn"
+              onClick={() => setLang(lang === 'ko' ? 'tr' : 'ko')}
+              title={lang === 'ko' ? 'Türkçe' : '한국어'}
+              style={{
+                height: 36,
+                borderRadius: 10,
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-light)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '0 10px',
+                color: 'var(--text-primary)',
+                transition: 'background 0.2s, transform 0.2s',
+                flexShrink: 0,
+                letterSpacing: '0.02em',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {lang === 'ko' ? 'Türkçe' : '한국어'}
+            </button>
           </div>
         </div>
       </header>
@@ -228,14 +258,14 @@ export default function App() {
             {/* 텍스트 입력 */}
             <div className="glass-card p-5">
               <div className="section-title">
-                <span>글자 입력</span>
+                <span>{t('input.title')}</span>
               </div>
 
               <textarea
                 id="text-input"
                 value={text}
                 onChange={e => setText(e.target.value)}
-                placeholder="한글을 입력하세요&#10;예: 한글"
+                placeholder={t('input.placeholder')}
                 className="input-field"
                 style={{
                   height: 100,
@@ -249,7 +279,7 @@ export default function App() {
 
               {/* 예시 버튼 */}
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-xs" style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>예시:</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>{t('input.examples')}</span>
                 {EXAMPLE_TEXTS.map(ex => (
                   <button
                     key={ex}
@@ -302,9 +332,9 @@ export default function App() {
                 style={{ borderBottom: '1px solid var(--border)' }}
               >
                 {[
-                  { id: 'color', label: '색상' },
-                  { id: 'template', label: '템플릿' },
-                  { id: 'export', label: '내보내기' },
+                  { id: 'color', label: t('tab.color') },
+                  { id: 'template', label: t('tab.template') },
+                  { id: 'export', label: t('tab.export') },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -365,9 +395,9 @@ export default function App() {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="section-title" style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0 }}>
-                  <span>미리보기</span>
+                  <span>{t('preview.title')}</span>
                   {hasHangul && (
-                    <span className="badge">{hangulChars.length}음절</span>
+                    <span className="badge">{hangulChars.length} {t('preview.syllableCount')}</span>
                   )}
                 </div>
 
@@ -375,7 +405,7 @@ export default function App() {
                 <div
                   className="preview-size-toggle"
                   role="group"
-                  aria-label="미리보기 크기"
+                  aria-label="Preview size"
                   data-active={previewSizeId}
                 >
                   <div className="segmented-thumb" aria-hidden />
@@ -386,7 +416,7 @@ export default function App() {
                       className={previewSizeId === s.id ? 'active' : ''}
                       onClick={() => setPreviewSizeId(s.id)}
                       id={`preview-size-${s.id}`}
-                      title={`미리보기 크기 ${s.label}`}
+                      title={s.label}
                     >
                       {s.label}
                     </button>
@@ -397,9 +427,9 @@ export default function App() {
               {/* 색상 범례 */}
               <div className="flex gap-4 mb-5">
                 {[
-                  { label: '초성', color: colors.choseong },
-                  { label: '중성', color: colors.jungseong },
-                  { label: '종성 (받침)', color: colors.jongseong },
+                  { label: t('legend.choseong'), color: colors.choseong },
+                  { label: t('legend.jungseong'), color: colors.jungseong },
+                  { label: t('legend.jongseong'), color: colors.jongseong },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-2">
                     <div
@@ -427,7 +457,7 @@ export default function App() {
                   <div className="text-center">
                     <div className="text-2xl mb-2">⚠️</div>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {fontError || '폰트를 불러올 수 없습니다.'}
+                      {fontError || t('font.loadFailed')}
                     </p>
                   </div>
                 </div>
@@ -440,7 +470,7 @@ export default function App() {
                 >
                   <div className="shimmer w-24 h-24 rounded-xl" />
                   <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    폰트 로딩 중...
+                    {t('font.loadingMsg')}
                   </p>
                 </div>
               )}
@@ -454,7 +484,7 @@ export default function App() {
                     >
                       <div className="text-center">
                         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          왼쪽에 한글을 입력하세요
+                          {t('preview.enterHangul')}
                         </p>
                       </div>
                     </div>
@@ -486,7 +516,7 @@ export default function App() {
             {fontReady && hasHangul && (
               <div className="glass-card p-5">
                 <div className="section-title">
-                  <span>음절 분석</span>
+                  <span>{t('analysis.title')}</span>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {hangulChars.map((item, i) => {
@@ -519,7 +549,7 @@ export default function App() {
                               background: colors.choseong + '18',
                             }}
                           >
-                            초성: {d.choseong.jamo}
+                            {t('analysis.choseong')}: {d.choseong.jamo}
                           </span>
                           <span
                             className="jamo-tag text-sm"
@@ -529,7 +559,7 @@ export default function App() {
                               background: colors.jungseong + '18',
                             }}
                           >
-                            중성: {d.jungseong.jamo}
+                            {t('analysis.jungseong')}: {d.jungseong.jamo}
                           </span>
                           {d.hasJongseong && (
                             <span
@@ -540,7 +570,7 @@ export default function App() {
                                 background: colors.jongseong + '18',
                               }}
                             >
-                              종성: {d.jongseong.jamo}
+                              {t('analysis.jongseong')}: {d.jongseong.jamo}
                             </span>
                           )}
                           {!d.hasJongseong && (
@@ -553,7 +583,7 @@ export default function App() {
                                 opacity: 0.5,
                               }}
                             >
-                              종성: 없음
+                              {t('analysis.noJongseong')}
                             </span>
                           )}
                         </div>
@@ -568,7 +598,7 @@ export default function App() {
                               border: '1px solid var(--border)',
                             }}
                           >
-                            {d.isVerticalVowel ? '↕ 수직모음' : '↔ 수평모음'}
+                            {d.isVerticalVowel ? t('analysis.verticalVowel') : t('analysis.horizontalVowel')}
                           </span>
                         </div>
                       </div>
@@ -582,15 +612,15 @@ export default function App() {
             {!hasHangul && !fontLoading && (
               <div className="glass-card p-5">
                 <div className="section-title">
-                  <span>사용 방법</span>
+                  <span>{t('howto.title')}</span>
                 </div>
                 <ol className="flex flex-col gap-2">
                   {[
-                    '왼쪽 "글자 입력" 창에 한글을 입력합니다.',
-                    '"색상" 탭에서 초성·중성·종성의 색을 각각 설정하거나,',
-                    '"템플릿" 탭에서 미리 정의된 색 조합을 선택합니다.',
-                    '미리보기에서 색채가 분리된 글자를 확인합니다.',
-                    '"내보내기" 탭에서 SVG 또는 투명 PNG로 다운로드합니다.',
+                    t('howto.step1'),
+                    t('howto.step2'),
+                    t('howto.step3'),
+                    t('howto.step4'),
+                    t('howto.step5'),
                   ].map((step, i) => (
                     <li key={i} className="flex gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
                       <span

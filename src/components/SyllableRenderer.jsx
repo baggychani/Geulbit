@@ -8,6 +8,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG, sortJamoPaths, DEFAULT_LAYER_ORDER } from '../utils/fontParser';
 import { decomposeHangul } from '../utils/hangulDecompose';
 import { PREVIEW_SIZE_MAX } from '../utils/colorTemplates';
+import { useT } from '../utils/i18n';
 
 const RENDER_SIZE = 200; // 내부 렌더링 em 단위
 
@@ -22,6 +23,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
   const [loading, setLoading] = useState(true);
   const [copyStatus, setCopyStatus] = useState('');
   const prevCharRef = useRef(char);
+  const t = useT();
 
   const decomposed = decomposeHangul(char);
 
@@ -47,7 +49,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
     try {
       const font = getFont();
       if (!font) {
-        setError('폰트 로딩 중...');
+        setError(t('font.loadingMsg'));
         setLoading(false);
         return;
       }
@@ -55,7 +57,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
       const jamoPaths = extractJamoPaths(char, RENDER_SIZE);
 
       if (!jamoPaths || jamoPaths.length === 0) {
-        setError('글리프 추출 실패');
+        setError(t('syllable.extractFail'));
         setLoading(false);
         return;
       }
@@ -93,11 +95,11 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': pngBlob }),
       ]);
-      setCopyStatus('복사됨!');
+      setCopyStatus(t('syllable.copied'));
       setTimeout(() => setCopyStatus(''), 2000);
     } catch (err) {
       console.error(err);
-      setCopyStatus('오류');
+      setCopyStatus(t('syllable.copyError'));
       setTimeout(() => setCopyStatus(''), 2000);
     }
   };
@@ -151,7 +153,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
                 onClick={handleCopy}
                 className="px-4 py-2 bg-white text-gray-900 text-xs font-bold rounded-lg shadow-lg hover:bg-gray-100 transition-transform active:scale-95 flex items-center gap-2"
               >
-                {copyStatus || 'PNG 복사하기'}
+                {copyStatus || t('syllable.copyPNG')}
               </button>
             </div>
           )}

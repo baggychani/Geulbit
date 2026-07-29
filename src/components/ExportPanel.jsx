@@ -7,13 +7,14 @@ import React, { useState, useCallback } from 'react';
 import JSZip from 'jszip';
 import { exportSVG, exportPNG } from './SyllableRenderer';
 import { parseText } from '../utils/hangulDecompose';
+import { useT } from '../utils/i18n';
 
 const SIZE_OPTIONS = [
   { id: '200', label: '200', value: 200, title: '200px' },
   { id: '300', label: '300', value: 300, title: '300px' },
   { id: '500', label: '500', value: 500, title: '500px' },
-  { id: '800', label: '800', value: 800, title: '800px · 기본' },
-  { id: '1200', label: '1200', value: 1200, title: '1200px · 고해상' },
+  { id: '800', label: '800', value: 800, title: '800px' },
+  { id: '1200', label: '1200', value: 1200, title: '1200px' },
 ];
 
 /** Blob을 파일 이름으로 바로 다운로드 (File System Access API 미사용) */
@@ -47,6 +48,7 @@ function buildExportBaseName(text) {
 }
 
 export default function ExportPanel({ text, colors, layerOrder }) {
+  const t = useT();
   const [outputSize, setOutputSize] = useState(800);
   const [useZip, setUseZip] = useState(true);
   const [exporting, setExporting] = useState(null);
@@ -70,7 +72,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
 
   const handleExportPNG = useCallback(async () => {
     if (syllables.length === 0) {
-      showMessage('내보낼 한글이 없습니다.', 'error');
+      showMessage(t('export.noHangul'), 'error');
       return;
     }
     setExporting('png');
@@ -94,7 +96,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           }
         }
       }
-      showMessage('PNG 다운로드를 시작했습니다.');
+      showMessage(t('export.pngStarted'));
     } catch (err) {
       console.error(err);
       showMessage(`오류: ${err.message}`, 'error');
@@ -104,7 +106,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
 
   const handleExportSVG = useCallback(async () => {
     if (syllables.length === 0) {
-      showMessage('내보낼 한글이 없습니다.', 'error');
+      showMessage(t('export.noHangul'), 'error');
       return;
     }
     setExporting('svg');
@@ -130,7 +132,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           }
         }
       }
-      showMessage('SVG 다운로드를 시작했습니다.');
+      showMessage(t('export.svgStarted'));
     } catch (err) {
       console.error(err);
       showMessage(`오류: ${err.message}`, 'error');
@@ -143,7 +145,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
     <div className="export-panel flex flex-col gap-4">
       <div>
         <div className="flex items-baseline justify-between gap-2 mb-2">
-          <span className="label-text" style={{ marginBottom: 0 }}>출력 크기</span>
+          <span className="label-text" style={{ marginBottom: 0 }}>{t('export.outputSize')}</span>
           <span className="export-size-current">{outputSize}px</span>
         </div>
         <div className="export-size-row" role="radiogroup" aria-label="출력 크기">
@@ -166,7 +168,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
 
       {syllables.length > 1 && (
         <div className="export-zip-block">
-          <span className="label-text block mb-2">여러 글자일 때</span>
+          <span className="label-text block mb-2">{t('export.multiTitle')}</span>
           <label className="flex items-start gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
             <input
               type="checkbox"
@@ -175,14 +177,14 @@ export default function ExportPanel({ text, colors, layerOrder }) {
               className="w-4 h-4 mt-0.5 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
             />
             <span className="flex-1 min-w-0">
-              ZIP 파일 하나로 받기 (권장)
+              {t('export.zipLabel')}
               <span
                 className="block text-xs mt-1 export-zip-hint"
                 style={{ color: 'var(--text-muted)' }}
               >
                 {useZip
-                  ? '선택한 크기의 PNG/SVG가 ZIP 하나로 저장됩니다.'
-                  : '글자마다 PNG/SVG 파일이 순서대로 다운로드됩니다.'}
+                  ? t('export.zipHintOn')
+                  : t('export.zipHintOff')}
               </span>
             </span>
           </label>
@@ -195,7 +197,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
       >
         <div className="preview-bg-checker w-5 h-5 rounded flex-shrink-0" style={{ backgroundSize: '6px 6px' }} />
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          투명 배경 · 브라우저 기본 다운로드 폴더에 저장됩니다
+          {t('export.transparentNote')}
         </span>
       </div>
 
@@ -209,7 +211,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           style={{ opacity: exporting ? 0.7 : 1 }}
         >
           {exporting === 'png' ? <span className="animate-spin">⏳</span> : <span>🖼️</span>}
-          PNG 다운로드
+          {t('export.pngDownload')}
         </button>
 
         <button
@@ -221,7 +223,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           style={{ opacity: exporting ? 0.7 : 1 }}
         >
           {exporting === 'svg' ? <span className="animate-spin">⏳</span> : <span>📐</span>}
-          SVG 다운로드
+          {t('export.svgDownload')}
         </button>
       </div>
 

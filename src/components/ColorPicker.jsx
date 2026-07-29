@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { LAYER_ORDERS } from '../utils/fontParser';
 
 const JAMO_LABELS = {
   choseong: { label: '초성' },
@@ -21,7 +22,7 @@ const QUICK_COLORS = [
   '#FFE66D', '#A8EDEA', '#FED3D1', '#C3B1E1', '#1A1A1A', '#ffffff',
 ];
 
-export default function ColorPicker({ colors, onChange }) {
+export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseong_top', onLayerOrderChange }) {
   const [hexInputs, setHexInputs] = useState({
     choseong: colors.choseong,
     jungseong: colors.jungseong,
@@ -158,6 +159,37 @@ export default function ColorPicker({ colors, onChange }) {
           </div>
         </div>
       ))}
+
+      {/* 레이어 겹침 순서 (Z-Order) */}
+      <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-2">
+        <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
+          획 겹침 순서 (Z-Order)
+        </span>
+        <div className="flex flex-col gap-1.5">
+          {Object.values(LAYER_ORDERS).map((opt) => (
+            <label
+              key={opt.id}
+              className="flex items-center gap-2 text-xs p-2 rounded-lg cursor-pointer transition-colors"
+              style={{
+                background: layerOrderKey === opt.id ? 'rgba(124,111,247,0.15)' : 'var(--bg-input)',
+                border: `1px solid ${layerOrderKey === opt.id ? 'var(--accent)' : 'var(--border)'}`,
+                color: layerOrderKey === opt.id ? 'var(--accent-light)' : 'var(--text-primary)',
+              }}
+            >
+              <input
+                type="radio"
+                name="layerOrder"
+                value={opt.id}
+                checked={layerOrderKey === opt.id}
+                onChange={() => onLayerOrderChange && onLayerOrderChange(opt.id)}
+                className="w-3.5 h-3.5"
+              />
+              <span className="font-semibold">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
+

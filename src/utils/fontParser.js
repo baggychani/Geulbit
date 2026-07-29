@@ -164,16 +164,51 @@ export function getGlyphBoundingBox(char, fontSize = 200) {
   }
 }
 
+export const LAYER_ORDERS = {
+  choseong_top: {
+    id: 'choseong_top',
+    label: '초성 맨 위 (권장)',
+    order: ['jungseong', 'jongseong', 'choseong'],
+  },
+  jungseong_top: {
+    id: 'jungseong_top',
+    label: '중성 맨 위',
+    order: ['choseong', 'jongseong', 'jungseong'],
+  },
+  jongseong_top: {
+    id: 'jongseong_top',
+    label: '종성 맨 위',
+    order: ['choseong', 'jungseong', 'jongseong'],
+  },
+};
+
+export const DEFAULT_LAYER_ORDER = LAYER_ORDERS.choseong_top.order;
+
+/**
+ * 자소 패스를 Z-Order(레이어 순서)에 맞춰 정렬합니다.
+ * 배열 앞쪽이 아래 레이어(먼저 그려짐), 뒤쪽이 위 레이어(나중에 그려짐)
+ */
+export function sortJamoPaths(jamoPaths, layerOrder = DEFAULT_LAYER_ORDER) {
+  if (!jamoPaths || jamoPaths.length < 2) return jamoPaths;
+  const orderMap = {};
+  layerOrder.forEach((type, idx) => {
+    orderMap[type] = idx;
+  });
+  return [...jamoPaths].sort((a, b) => (orderMap[a.type] ?? 0) - (orderMap[b.type] ?? 0));
+}
+
 /**
  * SVG 문자열 생성 (투명 배경, 내보내기용)
  * viewBox는 실제 글리프 bounding box 기준으로 계산
  */
-export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200) {
+export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, layerOrder = DEFAULT_LAYER_ORDER) {
   const font = loadedFont;
   if (!font) return null;
 
-  const jamoPaths = extractJamoPaths(char, fontSize);
-  if (!jamoPaths?.length) return null;
+  const rawJamoPaths = extractJamoPaths(char, fontSize);
+  if (!rawJamoPaths?.length) return null;
+
+  const jamoPaths = sortJamoPaths(rawJamoPaths, layerOrder);
 
   const bb = getGlyphBoundingBox(char, fontSize);
   const colorMap = {
@@ -210,3 +245,4 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200) {
 ${pathEls}
 </svg>`;
 }
+

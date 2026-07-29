@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { preloadBundledFonts, setActiveFont, FONT_VARIANTS } from './utils/fontParser';
+import { preloadBundledFonts, setActiveFont, FONT_VARIANTS, LAYER_ORDERS } from './utils/fontParser';
 import { parseText } from './utils/hangulDecompose';
 import { DEFAULT_COLORS, PREVIEW_SIZES } from './utils/colorTemplates';
 import SyllableRenderer from './components/SyllableRenderer';
@@ -28,6 +28,8 @@ export default function App() {
   const [text, setText] = useState('');
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
+  const [layerOrderKey, setLayerOrderKey] = useState('choseong_top');
+
 
   const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
   const [previewSizeId, setPreviewSizeId] = useState('M');
@@ -103,6 +105,7 @@ export default function App() {
   const hasHangul = hangulChars.length > 0;
   const previewSize = PREVIEW_SIZES.find(s => s.id === previewSizeId)?.value ?? 160;
   const activeVariant = FONT_VARIANTS[fontVariant];
+  const currentLayerOrder = LAYER_ORDERS[layerOrderKey]?.order || LAYER_ORDERS.choseong_top.order;
 
   return (
     <div className="app-shell min-h-screen" style={{ background: 'var(--bg-primary)' }}>
@@ -331,7 +334,12 @@ export default function App() {
               <div className="p-5">
                 {activeTab === 'color' && (
                   <div className="fade-in">
-                    <ColorPicker colors={colors} onChange={handleColorChange} />
+                    <ColorPicker
+                      colors={colors}
+                      onChange={handleColorChange}
+                      layerOrderKey={layerOrderKey}
+                      onLayerOrderChange={setLayerOrderKey}
+                    />
                   </div>
                 )}
                 {activeTab === 'template' && (
@@ -344,7 +352,7 @@ export default function App() {
                 )}
                 {activeTab === 'export' && (
                   <div className="fade-in">
-                    <ExportPanel text={text} colors={colors} />
+                    <ExportPanel text={text} colors={colors} layerOrder={currentLayerOrder} />
                   </div>
                 )}
               </div>
@@ -464,6 +472,7 @@ export default function App() {
                           colors={colors}
                           displaySize={previewSize}
                           fontRevision={fontRevision}
+                          layerOrder={currentLayerOrder}
                         />
                       ))}
                     </div>
@@ -471,6 +480,7 @@ export default function App() {
                 </>
               )}
             </div>
+
 
             {/* 디버그 / 분석 정보 */}
             {fontReady && hasHangul && (

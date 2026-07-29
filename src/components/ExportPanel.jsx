@@ -46,7 +46,7 @@ function buildExportBaseName(text) {
   return sanitized || 'hangul';
 }
 
-export default function ExportPanel({ text, colors }) {
+export default function ExportPanel({ text, colors, layerOrder }) {
   const [outputSize, setOutputSize] = useState(800);
   const [useZip, setUseZip] = useState(true);
   const [exporting, setExporting] = useState(null);
@@ -76,18 +76,18 @@ export default function ExportPanel({ text, colors }) {
     setExporting('png');
     try {
       if (syllables.length === 1) {
-        const blob = await exportPNG(syllables[0].char, colors, outputSize);
+        const blob = await exportPNG(syllables[0].char, colors, outputSize, layerOrder);
         if (!blob) throw new Error('PNG 변환 실패');
         downloadBlob(blob, `hangul_${syllables[0].char}_${outputSize}px.png`);
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
-          const b = await exportPNG(char, colors, outputSize);
+          const b = await exportPNG(char, colors, outputSize, layerOrder);
           if (b) zip.file(`hangul_${char}_${outputSize}px.png`, b);
         });
         downloadBlob(blob, `${exportBaseName}_png.zip`);
       } else {
         for (const syl of syllables) {
-          const blob = await exportPNG(syl.char, colors, outputSize);
+          const blob = await exportPNG(syl.char, colors, outputSize, layerOrder);
           if (blob) {
             downloadBlob(blob, `hangul_${syl.char}_${outputSize}px.png`);
             await delay(200);
@@ -100,7 +100,7 @@ export default function ExportPanel({ text, colors }) {
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder]);
 
   const handleExportSVG = useCallback(async () => {
     if (syllables.length === 0) {
@@ -110,19 +110,19 @@ export default function ExportPanel({ text, colors }) {
     setExporting('svg');
     try {
       if (syllables.length === 1) {
-        const svgStr = exportSVG(syllables[0].char, colors, outputSize);
+        const svgStr = exportSVG(syllables[0].char, colors, outputSize, layerOrder);
         if (!svgStr) throw new Error('SVG 생성 실패');
         const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
         downloadBlob(blob, `hangul_${syllables[0].char}.svg`);
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
-          const svgStr = exportSVG(char, colors, outputSize);
+          const svgStr = exportSVG(char, colors, outputSize, layerOrder);
           if (svgStr) zip.file(`hangul_${char}.svg`, svgStr);
         });
         downloadBlob(blob, `${exportBaseName}_svg.zip`);
       } else {
         for (const syl of syllables) {
-          const svgStr = exportSVG(syl.char, colors, outputSize);
+          const svgStr = exportSVG(syl.char, colors, outputSize, layerOrder);
           if (svgStr) {
             const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
             downloadBlob(blob, `hangul_${syl.char}.svg`);
@@ -136,7 +136,8 @@ export default function ExportPanel({ text, colors }) {
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder]);
+
 
   return (
     <div className="export-panel flex flex-col gap-4">

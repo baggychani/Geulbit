@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG } from '../utils/fontParser';
+import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG, sortJamoPaths, DEFAULT_LAYER_ORDER } from '../utils/fontParser';
 import { decomposeHangul } from '../utils/hangulDecompose';
 import { PREVIEW_SIZE_MAX } from '../utils/colorTemplates';
 
@@ -15,7 +15,7 @@ const RENDER_SIZE = 200; // 내부 렌더링 em 단위
  * 단일 음절 SVG 렌더러
  * 셀 자리는 항상 L(PREVIEW_SIZE_MAX)로 고정 — S/M 전환 시 레이아웃 출렁임 없음
  */
-export default function SyllableRenderer({ char, colors, displaySize = 160, fontRevision = 0 }) {
+export default function SyllableRenderer({ char, colors, displaySize = 160, fontRevision = 0, layerOrder = DEFAULT_LAYER_ORDER }) {
   const [paths, setPaths] = useState(null);
   const [bbox, setBbox] = useState(null);
   const [error, setError] = useState(null);
@@ -88,7 +88,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
 
   const handleCopy = async () => {
     try {
-      const pngBlob = await exportPNG(char, colors, 300);
+      const pngBlob = await exportPNG(char, colors, 300, layerOrder);
       if (!pngBlob) throw new Error('변환 실패');
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': pngBlob }),
@@ -103,6 +103,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
   };
 
   const svgSize = displaySize * 0.82;
+  const renderPaths = sortJamoPaths(paths, layerOrder);
 
   return (
     <div className="syllable-cell" style={{ width: PREVIEW_SIZE_MAX }}>
@@ -122,7 +123,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
               {error}
             </div>
           )}
-          {!loading && !error && paths && (
+          {!loading && !error && renderPaths && (
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox={viewBox}
@@ -133,7 +134,7 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
                 transition: 'width 0.28s cubic-bezier(0.34, 1.05, 0.64, 1), height 0.28s cubic-bezier(0.34, 1.05, 0.64, 1)',
               }}
             >
-              {paths.map((jp, i) => (
+              {renderPaths.map((jp, i) => (
                 <path
                   key={`${jp.type}-${i}-${jp.glyphIndex ?? i}`}
                   fill={colorMap[jp.type] || '#ffffff'}
@@ -218,15 +219,15 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
 /**
  * SVG 문자열 내보내기 (투명 배경)
  */
-export function exportSVG(char, colors, outputSize = 300) {
-  return buildExportSVG(char, colors, outputSize, 200);
+export function exportSVG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER) {
+  return buildExportSVG(char, colors, outputSize, 200, layerOrder);
 }
 
 /**
  * SVG → PNG Canvas 변환 (투명 배경)
  */
-export async function exportPNG(char, colors, outputSize = 300) {
-  const svgString = exportSVG(char, colors, outputSize);
+export async function exportPNG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER) {
+  const svgString = exportSVG(char, colors, outputSize, layerOrder);
   if (!svgString) return null;
 
   return new Promise((resolve, reject) => {
@@ -257,3 +258,4 @@ export async function exportPNG(char, colors, outputSize = 300) {
     img.src = url;
   });
 }
+

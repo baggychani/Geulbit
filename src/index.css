@@ -1,0 +1,296 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1d27;
+    --bg-card: #1e2130;
+    --bg-input: #252840;
+    --border: #2d3154;
+    --border-light: #3d4474;
+    --text-primary: #e8eaf6;
+    --text-secondary: #9ca3d4;
+    --text-muted: #6b7280;
+    --accent: #7c6ff7;
+    --accent-glow: rgba(124, 111, 247, 0.3);
+    --bg-glass: rgba(30, 33, 48, 0.85);
+  }
+
+  :root.light {
+    --bg-primary: #f4f6fb;
+    --bg-secondary: #eaedf5;
+    --bg-card: #ffffff;
+    --bg-input: #f0f2fa;
+    --border: #d1d8ee;
+    --border-light: #b0bde0;
+    --text-primary: #1a1d2e;
+    --text-secondary: #4a5280;
+    --text-muted: #8a93b8;
+    --accent: #6557f0;
+    --accent-glow: rgba(101, 87, 240, 0.2);
+    --bg-glass: rgba(255, 255, 255, 0.85);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  }
+
+  body {
+    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: white;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .glass-card-hover {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .glass-card-hover:hover {
+    border-color: var(--border-light);
+    box-shadow: 0 4px 24px rgba(124, 111, 247, 0.1);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #7c6ff7, #9b59d5);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(124, 111, 247, 0.4);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-secondary {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124, 111, 247, 0.08);
+  }
+
+  .input-field {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+  }
+
+  .input-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .input-field::placeholder {
+    color: var(--text-muted);
+  }
+
+  .label-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(124, 111, 247, 0.3);
+  }
+
+  .jamo-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    opacity: 0.9;
+  }
+
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .color-swatch:hover {
+    transform: scale(1.15);
+    border-color: white;
+  }
+
+  .color-swatch.active {
+    border-color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(255,255,255,0.3);
+  }
+
+  .template-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .template-card:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: rgba(124, 111, 247, 0.06);
+  }
+
+  .template-card.selected {
+    border-color: var(--accent);
+    background: rgba(124, 111, 247, 0.1);
+    color: var(--text-primary);
+  }
+
+  .preview-bg-checker {
+    background-image: repeating-conic-gradient(#2a2d40 0% 25%, #1e2130 0% 50%);
+    background-size: 16px 16px;
+    border-radius: 12px;
+    transition: background-image 0.3s ease;
+  }
+
+  :root.light .preview-bg-checker {
+    background-image: repeating-conic-gradient(#d4d8e8 0% 25%, #eaedf5 0% 50%);
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(124,111,247,0.15), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+}

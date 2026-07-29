@@ -25,7 +25,7 @@ export default function App() {
   const [fontRevision, setFontRevision] = useState(0);
   const [fontsPreloaded, setFontsPreloaded] = useState(false);
 
-  const [text, setText] = useState('한글');
+  const [text, setText] = useState('');
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
 

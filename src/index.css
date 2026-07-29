@@ -445,8 +445,71 @@
     align-content: flex-start;
     align-items: flex-start;
     justify-content: flex-start;
-    /* L 셀 + 라벨 여유 — 크기 전환 시 높이 출렁임 방지 */
     min-height: 320px;
+  }
+
+  /* 내보내기 — 200~1200 한 줄, 고정 그리드(출렁임 방지) */
+  .export-size-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    height: 34px;
+  }
+
+  .export-size-chip {
+    height: 34px;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .export-size-chip:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  .export-size-chip.active {
+    border-color: var(--accent);
+    background: rgba(124, 111, 247, 0.12);
+    color: var(--text-primary);
+  }
+
+  .export-size-current {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: right;
+  }
+
+  .export-zip-block {
+    min-height: 88px;
+  }
+
+  .export-zip-hint {
+    min-height: 2.5em;
+    line-height: 1.45;
+  }
+
+  .export-panel-feedback {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .font-status-pill {
@@ -492,6 +555,30 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+  }
+
+  /* 태블릿·작은 노트북 (모바일 전용 UI는 없음) */
+  @media (max-width: 960px) {
+    .app-main-columns {
+      flex-direction: column;
+    }
+
+    .app-sidebar {
+      width: 100% !important;
+      max-width: 420px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app-header-inner {
+      flex-wrap: wrap;
+    }
+
+    .header-controls {
+      width: 100%;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
   }
 
   .preview-bg-checker {

@@ -1,6 +1,6 @@
 /**
  * ExportPanel.jsx
- * SVG/PNG 내보내기 패널
+ * SVG/PNG 내보내기 — 브라우저 기본 다운로드(다운로드 폴더)만 사용
  */
 
 import React, { useState, useCallback } from 'react';
@@ -9,36 +9,64 @@ import { exportSVG, exportPNG } from './SyllableRenderer';
 import { parseText } from '../utils/hangulDecompose';
 
 const SIZE_OPTIONS = [
-  { label: '200px', value: 200 },
-  { label: '300px', value: 300 },
-  { label: '500px', value: 500 },
-  { label: '800px (기본)', value: 800 },
-  { label: '1200px (고해상)', value: 1200 },
+  { id: '200', label: '200', value: 200, title: '200px' },
+  { id: '300', label: '300', value: 300, title: '300px' },
+  { id: '500', label: '500', value: 500, title: '500px' },
+  { id: '800', label: '800', value: 800, title: '800px · 기본' },
+  { id: '1200', label: '1200', value: 1200, title: '1200px · 고해상' },
 ];
 
+/** Blob을 파일 이름으로 바로 다운로드 (File System Access API 미사용) */
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/** ZIP 파일명용: 입력 순서대로 한글만 이어 붙임 (예: 안녕하세요 → 안녕하세요) */
+function buildExportBaseName(text) {
+  const hangul = parseText(text || '')
+    .filter(t => t.isHangul)
+    .map(t => t.char)
+    .join('');
+  const sanitized = hangul
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '')
+    .trim()
+    .slice(0, 80);
+  return sanitized || 'hangul';
+}
+
 export default function ExportPanel({ text, colors }) {
-  const [outputSize, setOutputSize] = useState(800); // 800px 기본
-  const [useZip, setUseZip] = useState(false);
+  const [outputSize, setOutputSize] = useState(800);
+  const [useZip, setUseZip] = useState(true);
   const [exporting, setExporting] = useState(null);
   const [message, setMessage] = useState(null);
 
   const syllables = parseText(text || '').filter(t => t.isHangul);
+  const exportBaseName = buildExportBaseName(text);
 
   const showMessage = (msg, type = 'success') => {
     setMessage({ text: msg, type });
     setTimeout(() => setMessage(null), 3000);
   };
 
-  const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  const exportManyAsZip = useCallback(async (addToZip) => {
+    const zip = new JSZip();
+    for (const syl of syllables) {
+      await addToZip(zip, syl.char);
+    }
+    return zip.generateAsync({ type: 'blob' });
+  }, [syllables]);
 
   const handleExportPNG = useCallback(async () => {
     if (syllables.length === 0) {
@@ -47,73 +75,32 @@ export default function ExportPanel({ text, colors }) {
     }
     setExporting('png');
     try {
-      if (syllables.length === 1 || useZip) {
-        let blob, ext, mimeType, filename;
-        if (syllables.length === 1) {
-          blob = await exportPNG(syllables[0].char, colors, outputSize);
-          ext = 'png';
-          mimeType = 'image/png';
-          filename = `hangul_${syllables[0].char}_${outputSize}px.png`;
-        } else {
-          const zip = new JSZip();
-          for (const syl of syllables) {
-            const b = await exportPNG(syl.char, colors, outputSize);
-            if (b) zip.file(`hangul_${syl.char}_${outputSize}px.png`, b);
-          }
-          blob = await zip.generateAsync({ type: 'blob' });
-          ext = 'zip';
-          mimeType = 'application/zip';
-          filename = `hangul_png_bundle.zip`;
-        }
-
-        if (!blob) throw new Error('변환 실패');
-
-        if (window.showSaveFilePicker) {
-          try {
-            const handle = await window.showSaveFilePicker({
-              suggestedName: filename,
-              types: [{ description: ext.toUpperCase() + ' File', accept: { [mimeType]: ['.' + ext] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-          } catch (e) {
-            if (e.name !== 'AbortError') throw e;
-          }
-        } else {
-          downloadBlob(blob, filename);
-        }
+      if (syllables.length === 1) {
+        const blob = await exportPNG(syllables[0].char, colors, outputSize);
+        if (!blob) throw new Error('PNG 변환 실패');
+        downloadBlob(blob, `hangul_${syllables[0].char}_${outputSize}px.png`);
+      } else if (useZip) {
+        const blob = await exportManyAsZip(async (zip, char) => {
+          const b = await exportPNG(char, colors, outputSize);
+          if (b) zip.file(`hangul_${char}_${outputSize}px.png`, b);
+        });
+        downloadBlob(blob, `${exportBaseName}_png.zip`);
       } else {
-        // 여러 파일 & ZIP 사용 안 함 -> 폴더 선택
-        if (window.showDirectoryPicker) {
-          try {
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            for (const syl of syllables) {
-              const blob = await exportPNG(syl.char, colors, outputSize);
-              if (!blob) continue;
-              const handle = await dirHandle.getFileHandle(`hangul_${syl.char}_${outputSize}px.png`, { create: true });
-              const writable = await handle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-            }
-          } catch (e) {
-            if (e.name !== 'AbortError') throw e;
-          }
-        } else {
-          // Fallback
-          for (const syl of syllables) {
-            const blob = await exportPNG(syl.char, colors, outputSize);
-            if (blob) downloadBlob(blob, `hangul_${syl.char}_${outputSize}px.png`);
-            await new Promise(r => setTimeout(r, 150));
+        for (const syl of syllables) {
+          const blob = await exportPNG(syl.char, colors, outputSize);
+          if (blob) {
+            downloadBlob(blob, `hangul_${syl.char}_${outputSize}px.png`);
+            await delay(200);
           }
         }
       }
-      showMessage(`PNG 다운로드 완료 ✓`);
+      showMessage('PNG 다운로드를 시작했습니다.');
     } catch (err) {
+      console.error(err);
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName]);
 
   const handleExportSVG = useCallback(async () => {
     if (syllables.length === 0) {
@@ -122,92 +109,52 @@ export default function ExportPanel({ text, colors }) {
     }
     setExporting('svg');
     try {
-      if (syllables.length === 1 || useZip) {
-        let blob, ext, mimeType, filename;
-        if (syllables.length === 1) {
-          const svgStr = exportSVG(syllables[0].char, colors, outputSize);
-          if (!svgStr) throw new Error('SVG 생성 실패');
-          blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-          ext = 'svg';
-          mimeType = 'image/svg+xml';
-          filename = `hangul_${syllables[0].char}.svg`;
-        } else {
-          const zip = new JSZip();
-          for (const syl of syllables) {
-            const svgStr = exportSVG(syl.char, colors, outputSize);
-            if (svgStr) zip.file(`hangul_${syl.char}.svg`, svgStr);
-          }
-          blob = await zip.generateAsync({ type: 'blob' });
-          ext = 'zip';
-          mimeType = 'application/zip';
-          filename = `hangul_svg_bundle.zip`;
-        }
-
-        if (!blob) throw new Error('변환 실패');
-
-        if (window.showSaveFilePicker) {
-          try {
-            const handle = await window.showSaveFilePicker({
-              suggestedName: filename,
-              types: [{ description: ext.toUpperCase() + ' File', accept: { [mimeType]: ['.' + ext] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-          } catch (e) {
-            if (e.name !== 'AbortError') throw e;
-          }
-        } else {
-          downloadBlob(blob, filename);
-        }
+      if (syllables.length === 1) {
+        const svgStr = exportSVG(syllables[0].char, colors, outputSize);
+        if (!svgStr) throw new Error('SVG 생성 실패');
+        const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(blob, `hangul_${syllables[0].char}.svg`);
+      } else if (useZip) {
+        const blob = await exportManyAsZip(async (zip, char) => {
+          const svgStr = exportSVG(char, colors, outputSize);
+          if (svgStr) zip.file(`hangul_${char}.svg`, svgStr);
+        });
+        downloadBlob(blob, `${exportBaseName}_svg.zip`);
       } else {
-        // 여러 파일 & ZIP 사용 안 함 -> 폴더 선택
-        if (window.showDirectoryPicker) {
-          try {
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            for (const syl of syllables) {
-              const svgStr = exportSVG(syl.char, colors, outputSize);
-              if (!svgStr) continue;
-              const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-              const handle = await dirHandle.getFileHandle(`hangul_${syl.char}.svg`, { create: true });
-              const writable = await handle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-            }
-          } catch (e) {
-            if (e.name !== 'AbortError') throw e;
-          }
-        } else {
-          // Fallback
-          for (const syl of syllables) {
-            const svgStr = exportSVG(syl.char, colors, outputSize);
-            if (svgStr) {
-              const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-              downloadBlob(blob, `hangul_${syl.char}.svg`);
-              await new Promise(r => setTimeout(r, 100));
-            }
+        for (const syl of syllables) {
+          const svgStr = exportSVG(syl.char, colors, outputSize);
+          if (svgStr) {
+            const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+            downloadBlob(blob, `hangul_${syl.char}.svg`);
+            await delay(150);
           }
         }
       }
-      showMessage(`SVG 다운로드 완료 ✓`);
+      showMessage('SVG 다운로드를 시작했습니다.');
     } catch (err) {
+      console.error(err);
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* 크기 선택 */}
+    <div className="export-panel flex flex-col gap-4">
       <div>
-        <span className="label-text">출력 크기</span>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-baseline justify-between gap-2 mb-2">
+          <span className="label-text" style={{ marginBottom: 0 }}>출력 크기</span>
+          <span className="export-size-current">{outputSize}px</span>
+        </div>
+        <div className="export-size-row" role="radiogroup" aria-label="출력 크기">
           {SIZE_OPTIONS.map(opt => (
             <button
-              key={opt.value}
+              key={opt.id}
+              type="button"
+              role="radio"
+              aria-checked={outputSize === opt.value}
+              title={opt.title}
               onClick={() => setOutputSize(opt.value)}
-              className={outputSize === opt.value ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '6px 12px', fontSize: 12 }}
+              className={`export-size-chip ${outputSize === opt.value ? 'active' : ''}`}
               id={`size-${opt.value}`}
             >
               {opt.label}
@@ -216,81 +163,83 @@ export default function ExportPanel({ text, colors }) {
         </div>
       </div>
 
-      {/* 다중 파일 옵션 */}
       {syllables.length > 1 && (
-        <div>
-          <span className="label-text block mb-2">저장 방식 (다중 글자)</span>
-          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
-            <input 
-              type="checkbox" 
-              checked={useZip} 
+        <div className="export-zip-block">
+          <span className="label-text block mb-2">여러 글자일 때</span>
+          <label className="flex items-start gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+            <input
+              type="checkbox"
+              checked={useZip}
               onChange={e => setUseZip(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+              className="w-4 h-4 mt-0.5 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
             />
-            하나의 ZIP 파일로 묶어서 저장하기
+            <span className="flex-1 min-w-0">
+              ZIP 파일 하나로 받기 (권장)
+              <span
+                className="block text-xs mt-1 export-zip-hint"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {useZip
+                  ? '선택한 크기의 PNG/SVG가 ZIP 하나로 저장됩니다.'
+                  : '글자마다 PNG/SVG 파일이 순서대로 다운로드됩니다.'}
+              </span>
+            </span>
           </label>
         </div>
       )}
 
-      {/* 배경 정보 */}
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
         style={{ background: 'rgba(124,111,247,0.08)', border: '1px solid rgba(124,111,247,0.2)' }}
       >
         <div className="preview-bg-checker w-5 h-5 rounded flex-shrink-0" style={{ backgroundSize: '6px 6px' }} />
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          투명 배경 PNG / SVG 출력
+          투명 배경 · 브라우저 기본 다운로드 폴더에 저장됩니다
         </span>
       </div>
 
-      {/* 다운로드 버튼 */}
       <div className="flex flex-col gap-2">
         <button
+          type="button"
           className="btn-primary w-full justify-center"
           onClick={handleExportPNG}
           disabled={!!exporting || syllables.length === 0}
           id="export-png-btn"
           style={{ opacity: exporting ? 0.7 : 1 }}
         >
-          {exporting === 'png' ? (
-            <span className="animate-spin">⏳</span>
-          ) : (
-            <span>🖼️</span>
-          )}
-          PNG 다운로드 ({outputSize}px, 투명)
+          {exporting === 'png' ? <span className="animate-spin">⏳</span> : <span>🖼️</span>}
+          PNG 다운로드
         </button>
 
         <button
+          type="button"
           className="btn-secondary w-full justify-center"
           onClick={handleExportSVG}
           disabled={!!exporting || syllables.length === 0}
           id="export-svg-btn"
           style={{ opacity: exporting ? 0.7 : 1 }}
         >
-          {exporting === 'svg' ? (
-            <span className="animate-spin">⏳</span>
-          ) : (
-            <span>📐</span>
-          )}
-          SVG 다운로드 (벡터, 무손실)
+          {exporting === 'svg' ? <span className="animate-spin">⏳</span> : <span>📐</span>}
+          SVG 다운로드
         </button>
       </div>
 
-      {/* 피드백 메시지 */}
-      {message && (
-        <div
-          className="text-sm px-3 py-2 rounded-lg fade-in text-center"
-          style={{
-            background: message.type === 'error'
-              ? 'rgba(239,68,68,0.1)'
-              : 'rgba(34,197,94,0.1)',
-            border: `1px solid ${message.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
-            color: message.type === 'error' ? '#f87171' : '#4ade80',
-          }}
-        >
-          {message.text}
-        </div>
-      )}
+      <div className="export-panel-feedback" aria-live="polite">
+        {message ? (
+          <div
+            className="text-sm px-3 py-2 rounded-lg fade-in text-center w-full"
+            style={{
+              background: message.type === 'error'
+                ? 'rgba(239,68,68,0.1)'
+                : 'rgba(34,197,94,0.1)',
+              border: `1px solid ${message.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+              color: message.type === 'error' ? '#f87171' : '#4ade80',
+            }}
+          >
+            {message.text}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -122,7 +122,7 @@ export default function App() {
           transition: 'background 0.3s ease',
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between relative z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4 relative z-10 app-header-inner">
           {/* 왼쪽: 로고 + 타이틀 */}
           <div className="flex items-center gap-3 min-w-0">
             <LogoMark size={36} />
@@ -215,11 +215,11 @@ export default function App() {
 
       {/* 메인 레이아웃 */}
       <main className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        <div className="flex gap-6" style={{ alignItems: 'flex-start' }}>
+        <div className="flex gap-6 app-main-columns" style={{ alignItems: 'flex-start' }}>
 
           {/* ─── 왼쪽 패널 ─── */}
           <aside
-            className="flex flex-col gap-5"
+            className="app-sidebar flex flex-col gap-5"
             style={{ width: 320, flexShrink: 0 }}
           >
             {/* 텍스트 입력 */}

@@ -38,6 +38,11 @@
     transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
   }
 
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+
   body {
     font-family: 'Inter', 'Noto Sans KR', sans-serif;
     background-color: var(--bg-primary);
@@ -143,6 +148,11 @@
     border-radius: 16px;
   }
 
+  .tab-content-container {
+    min-height: 420px;
+    box-sizing: border-box;
+  }
+
   .glass-card-hover {
     background: var(--bg-glass);
     backdrop-filter: blur(20px);
@@ -171,13 +181,20 @@
     gap: 8px;
   }
 
-  .btn-primary:hover {
+  .btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 20px rgba(124, 111, 247, 0.4);
   }
 
-  .btn-primary:active {
+  .btn-primary:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
   }
 
   .btn-secondary {
@@ -195,10 +212,17 @@
     gap: 8px;
   }
 
-  .btn-secondary:hover {
+  .btn-secondary:hover:not(:disabled) {
     border-color: var(--accent);
     color: var(--accent);
     background: rgba(124, 111, 247, 0.08);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
   }
 
   .input-field {
@@ -517,13 +541,14 @@
     align-items: center;
     gap: 8px;
     width: 200px;
+    max-width: 200px;
     height: 36px;
     padding: 0 12px;
     box-sizing: border-box;
     border-radius: 10px;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    flex-shrink: 0;
+    flex-shrink: 1;
     overflow: hidden;
   }
 
@@ -604,12 +629,12 @@
   }
 
   .fade-in {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.25s ease-out;
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .pulse-dot {

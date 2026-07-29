@@ -119,10 +119,10 @@ export function extractJamoPaths(char, fontSize = 200) {
       const childGlyph = font.glyphs.get(comp.glyphIndex);
       if (!childGlyph) continue;
 
-      // 하위 글리프가 또 복합인 경우 → getPath로 자동 flatten
       // (UnDotum에서는 발생하지 않지만 안전장치)
       const path = childGlyph.getPath(0, fontSize, fontSize);
       const pathData = path.toPathData(3);
+      const bounds = path.getBoundingBox();
 
       if (pathData && pathData.length > 0) {
         result.push({
@@ -130,6 +130,7 @@ export function extractJamoPaths(char, fontSize = 200) {
           pathData,
           glyphIndex: comp.glyphIndex,
           glyphName: childGlyph.name || '',
+          bounds,
         });
       }
     }
@@ -145,6 +146,7 @@ export function extractJamoPaths(char, fontSize = 200) {
     pathData: path.toPathData(3),
     glyphIndex: glyph.index,
     glyphName: glyph.name || '',
+    bounds: path.getBoundingBox(),
   }];
 }
 
@@ -201,7 +203,7 @@ export function sortJamoPaths(jamoPaths, layerOrder = DEFAULT_LAYER_ORDER) {
  * SVG 문자열 생성 (투명 배경, 내보내기용)
  * viewBox는 실제 글리프 bounding box 기준으로 계산
  */
-export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, layerOrder = DEFAULT_LAYER_ORDER) {
+export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, layerOrder = DEFAULT_LAYER_ORDER, renderMode = 'classic') {
   const font = loadedFont;
   if (!font) return null;
 
@@ -217,8 +219,11 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, l
     jongseong: colors?.jongseong || '#718096',
   };
 
+  const decomposed = decomposeHangul(char);
+  const isGridActive = renderMode === 'grid' && decomposed && !decomposed.isDiphthong;
+
   let viewBox = `0 0 ${fontSize} ${fontSize}`;
-  if (bb && isFinite(bb.x1)) {
+  if (!isGridActive && bb && isFinite(bb.x1)) {
     const pad = fontSize * 0.04;
     const vx = (bb.x1 - pad).toFixed(1);
     const vy = (bb.y1 - pad).toFixed(1);
@@ -229,20 +234,78 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, l
     }
   }
 
-  const decomposed = decomposeHangul(char);
   const jamoInfo = decomposed
     ? `초성(${decomposed.choseong.jamo}) 중성(${decomposed.jungseong.jamo}) ${decomposed.hasJongseong ? `종성(${decomposed.jongseong.jamo})` : '(받침 없음)'}`
     : '';
 
-  const pathEls = jamoPaths.map(jp =>
-    `  <path fill="${colorMap[jp.type] || '#000'}" d="${jp.pathData}"/>`
-  ).join('\n');
+  let gridSvgLines = '';
+  if (isGridActive) {
+    gridSvgLines = `  <g stroke="#cbd5e1" stroke-width="2" fill="none">\n    <rect x="10" y="10" width="180" height="180" rx="8" />\n`;
+    if (decomposed.isVerticalVowel && !decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="100" y1="10" x2="100" y2="190"/>\n`;
+    } else if (decomposed.isVerticalVowel && decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="100" y1="10" x2="100" y2="100"/>\n    <line x1="10" y1="100" x2="190" y2="100"/>\n`;
+    } else if (decomposed.isHorizontalVowel && !decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="10" y1="100" x2="190" y2="100"/>\n`;
+    } else if (decomposed.isHorizontalVowel && decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="10" y1="70" x2="190" y2="70"/>\n    <line x1="10" y1="130" x2="190" y2="130"/>\n`;
+    }
+    gridSvgLines += `  </g>\n`;
+  }
+
+  const pathEls = jamoPaths.map(jp => {
+    let tf = '';
+    if (isGridActive) {
+      tf = getAutoGridTransform(decomposed, jp.type, jp.bounds);
+      if (tf) tf = `transform="${tf}"`;
+    }
+    return `  <path fill="${colorMap[jp.type] || '#000'}" d="${jp.pathData}" ${tf}/>`;
+  }).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="${viewBox}">
   <!-- ${char} | ${jamoInfo} -->
   <!-- 초성:${colorMap.choseong} 중성:${colorMap.jungseong} 종성:${colorMap.jongseong} -->
-${pathEls}
+${gridSvgLines}${pathEls}
 </svg>`;
+}
+
+export function getAutoGridTransform(decomposed, jpType, bounds, outerPad = 10, renderSize = 200) {
+  if (!decomposed || decomposed.isDiphthong || !bounds) return '';
+
+  let cell = null;
+
+  if (decomposed.isVerticalVowel && !decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: 100, y2: renderSize - outerPad };
+    if (jpType === 'jungseong') cell = { x1: 100, y1: outerPad, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  } else if (decomposed.isVerticalVowel && decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: 100, y2: 100 };
+    if (jpType === 'jungseong') cell = { x1: 100, y1: outerPad, x2: renderSize - outerPad, y2: 100 };
+    if (jpType === 'jongseong') cell = { x1: outerPad, y1: 100, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  } else if (decomposed.isHorizontalVowel && !decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: renderSize - outerPad, y2: 100 };
+    if (jpType === 'jungseong') cell = { x1: outerPad, y1: 100, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  } else if (decomposed.isHorizontalVowel && decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: renderSize - outerPad, y2: 70 };
+    if (jpType === 'jungseong') cell = { x1: outerPad, y1: 70, x2: renderSize - outerPad, y2: 130 };
+    if (jpType === 'jongseong') cell = { x1: outerPad, y1: 130, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  }
+
+  if (!cell) return '';
+
+  const cellCx = (cell.x1 + cell.x2) / 2;
+  const cellCy = (cell.y1 + cell.y2) / 2;
+
+  const jamoCx = (bounds.x1 + bounds.x2) / 2;
+  const jamoCy = (bounds.y1 + bounds.y2) / 2;
+
+  // 1. Fixed global scale maintains structural hierarchy and stroke proportions.
+  const GLOBAL_SCALE = 0.85;
+
+  // 2. Exact mathematical translation centering within the dedicated structural grid cell.
+  const tx = cellCx - jamoCx * GLOBAL_SCALE;
+  const ty = cellCy - jamoCy * GLOBAL_SCALE;
+
+  return `translate(${tx.toFixed(2)}, ${ty.toFixed(2)}) scale(${GLOBAL_SCALE})`;
 }
 

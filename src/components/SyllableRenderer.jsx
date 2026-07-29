@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
-import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG, sortJamoPaths, DEFAULT_LAYER_ORDER } from '../utils/fontParser';
+import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG, sortJamoPaths, DEFAULT_LAYER_ORDER, getAutoGridTransform } from '../utils/fontParser';
 import { decomposeHangul } from '../utils/hangulDecompose';
 import { PREVIEW_SIZE_MAX } from '../utils/colorTemplates';
 import { useT } from '../utils/i18n';
@@ -16,7 +16,14 @@ const RENDER_SIZE = 200; // 내부 렌더링 em 단위
  * 단일 음절 SVG 렌더러
  * 셀 자리는 항상 L(PREVIEW_SIZE_MAX)로 고정 — S/M 전환 시 레이아웃 출렁임 없음
  */
-export default function SyllableRenderer({ char, colors, displaySize = 160, fontRevision = 0, layerOrder = DEFAULT_LAYER_ORDER }) {
+export default function SyllableRenderer({
+  char,
+  colors,
+  displaySize = 160,
+  fontRevision = 0,
+  layerOrder = DEFAULT_LAYER_ORDER,
+  renderMode = 'classic',
+}) {
   const [paths, setPaths] = useState(null);
   const [bbox, setBbox] = useState(null);
   const [error, setError] = useState(null);
@@ -76,21 +83,35 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
 
   if (!char) return null;
 
-  let viewBox = `0 0 ${RENDER_SIZE} ${RENDER_SIZE}`;
+  const isGridActive = renderMode === 'grid' && decomposed && !decomposed.isDiphthong;
+
+  const viewBox = `0 0 ${RENDER_SIZE} ${RENDER_SIZE}`;
+  let classicTransform = '';
+
   if (bbox && bbox.x1 !== undefined && bbox.x1 !== Infinity) {
     const pad = RENDER_SIZE * 0.04;
-    const vx = Math.floor(bbox.x1 - pad);
-    const vy = Math.floor(bbox.y1 - pad);
-    const vw = Math.ceil(bbox.x2 - bbox.x1 + pad * 2);
-    const vh = Math.ceil(bbox.y2 - bbox.y1 + pad * 2);
-    if (vw > 0 && vh > 0) {
-      viewBox = `${vx} ${vy} ${vw} ${vh}`;
+    const bw = bbox.x2 - bbox.x1;
+    const bh = bbox.y2 - bbox.y1;
+    
+    if (bw > 0 && bh > 0) {
+      const cx = (bbox.x1 + bbox.x2) / 2;
+      const cy = (bbox.y1 + bbox.y2) / 2;
+      
+      const targetW = RENDER_SIZE - pad * 2;
+      const targetH = RENDER_SIZE - pad * 2;
+      // 너무 작을 때는 강제로 키우지 않고(max scale 1), 클 때만 줄임
+      const scale = Math.min(targetW / bw, targetH / bh, 1);
+      
+      const tx = (RENDER_SIZE / 2) - cx * scale;
+      const ty = (RENDER_SIZE / 2) - cy * scale;
+      
+      classicTransform = `translate(${tx.toFixed(2)}, ${ty.toFixed(2)}) scale(${scale.toFixed(3)})`;
     }
   }
 
   const handleCopy = async () => {
     try {
-      const pngBlob = await exportPNG(char, colors, 300, layerOrder);
+      const pngBlob = await exportPNG(char, colors, 300, layerOrder, renderMode);
       if (!pngBlob) throw new Error('변환 실패');
       await navigator.clipboard.write([
         new ClipboardItem({ 'image/png': pngBlob }),
@@ -107,15 +128,17 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
   const svgSize = displaySize * 0.82;
   const renderPaths = sortJamoPaths(paths, layerOrder);
 
+  const transitionStyle = 'width 0.28s cubic-bezier(0.34, 1.05, 0.64, 1), height 0.28s cubic-bezier(0.34, 1.05, 0.64, 1)';
+
   return (
-    <div className="syllable-cell" style={{ width: PREVIEW_SIZE_MAX }}>
+    <div className="syllable-cell" style={{ width: displaySize, transition: transitionStyle }}>
       <div
         className="syllable-glyph-slot"
-        style={{ width: PREVIEW_SIZE_MAX, height: PREVIEW_SIZE_MAX }}
+        style={{ width: displaySize, height: displaySize, transition: transitionStyle }}
       >
         <div
           className="preview-bg-checker syllable-glyph-frame group relative flex items-center justify-center"
-          style={{ width: displaySize, height: displaySize }}
+          style={{ width: displaySize, height: displaySize, transition: transitionStyle }}
         >
           {loading && (
             <div className="shimmer w-full h-full absolute inset-0" style={{ borderRadius: 12 }} />
@@ -133,16 +156,51 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
                 width: svgSize,
                 height: svgSize,
                 overflow: 'visible',
-                transition: 'width 0.28s cubic-bezier(0.34, 1.05, 0.64, 1), height 0.28s cubic-bezier(0.34, 1.05, 0.64, 1)',
+                transition: transitionStyle,
               }}
             >
-              {renderPaths.map((jp, i) => (
-                <path
-                  key={`${jp.type}-${i}-${jp.glyphIndex ?? i}`}
-                  fill={colorMap[jp.type] || '#ffffff'}
-                  d={jp.pathData}
-                />
-              ))}
+              {/* 그리드 외곽 및 분할선 렌더링 */}
+              {isGridActive && (
+                <g stroke="#cbd5e1" strokeWidth="2" fill="none">
+                  <rect x="10" y="10" width="180" height="180" rx="8" />
+                  
+                  {decomposed.isVerticalVowel && !decomposed.hasJongseong && (
+                    <line x1="100" y1="10" x2="100" y2="190" />
+                  )}
+                  {decomposed.isVerticalVowel && decomposed.hasJongseong && (
+                    <>
+                      <line x1="100" y1="10" x2="100" y2="100" />
+                      <line x1="10" y1="100" x2="190" y2="100" />
+                    </>
+                  )}
+                  {decomposed.isHorizontalVowel && !decomposed.hasJongseong && (
+                    <line x1="10" y1="100" x2="190" y2="100" />
+                  )}
+                  {decomposed.isHorizontalVowel && decomposed.hasJongseong && (
+                    <>
+                      <line x1="10" y1="70" x2="190" y2="70" />
+                      <line x1="10" y1="130" x2="190" y2="130" />
+                    </>
+                  )}
+                </g>
+              )}
+
+              {/* 자모 요소 렌더링 */}
+              {renderPaths.map((jp, i) => {
+                let tf = classicTransform; // 기본적으로 클래식 모드 트랜스폼 적용
+                if (isGridActive) {
+                  tf = getAutoGridTransform(decomposed, jp.type, jp.bounds, 10, RENDER_SIZE);
+                }
+                return (
+                  <path
+                    key={`${jp.type}-${i}-${jp.glyphIndex ?? i}`}
+                    fill={colorMap[jp.type] || '#ffffff'}
+                    d={jp.pathData}
+                    transform={tf || undefined}
+                    style={{ transition: 'transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1)' }}
+                  />
+                );
+              })}
             </svg>
           )}
 
@@ -221,15 +279,15 @@ export default function SyllableRenderer({ char, colors, displaySize = 160, font
 /**
  * SVG 문자열 내보내기 (투명 배경)
  */
-export function exportSVG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER) {
-  return buildExportSVG(char, colors, outputSize, 200, layerOrder);
+export function exportSVG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER, renderMode = 'classic') {
+  return buildExportSVG(char, colors, outputSize, 200, layerOrder, renderMode);
 }
 
 /**
  * SVG → PNG Canvas 변환 (투명 배경)
  */
-export async function exportPNG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER) {
-  const svgString = exportSVG(char, colors, outputSize, layerOrder);
+export async function exportPNG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER, renderMode = 'classic') {
+  const svgString = exportSVG(char, colors, outputSize, layerOrder, renderMode);
   if (!svgString) return null;
 
   return new Promise((resolve, reject) => {

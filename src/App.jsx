@@ -24,7 +24,7 @@ export default function App() {
   const [fontError, setFontError] = useState(null);
   const [fontLoading, setFontLoading] = useState(true);
   const [fontInfo, setFontInfo] = useState(null);
-  const [fontVariant, setFontVariant] = useState('regular');
+  const [fontVariant, setFontVariant] = useState('bold');
   const [fontRevision, setFontRevision] = useState(0);
   const [fontsPreloaded, setFontsPreloaded] = useState(false);
 
@@ -36,6 +36,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
   const [previewSizeId, setPreviewSizeId] = useState('M');
+  const [renderMode, setRenderMode] = useState('classic'); // 'classic' | 'grid'
   const [isDark, setIsDark] = useState(false);
 
   // 다크/라이트 모드 적용
@@ -54,7 +55,7 @@ export default function App() {
         await preloadBundledFonts();
         if (cancelled) return;
         // Promise.all 완료 순서와 무관하게 현재 굵기로 고정
-        setActiveFont(FONT_VARIANTS.regular.url);
+        setActiveFont(FONT_VARIANTS.bold.url);
         setFontsPreloaded(true);
         setFontReady(true);
       } catch (err) {
@@ -128,7 +129,7 @@ export default function App() {
           transition: 'background 0.3s ease',
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4 relative z-10 app-header-inner">
+        <div className="max-w-[1360px] mx-auto px-6 py-4 flex items-center justify-between gap-4 relative z-10 app-header-inner">
           {/* 왼쪽: 로고 + 타이틀 */}
           <div className="flex items-center gap-3 min-w-0">
             <LogoMark size={36} />
@@ -216,44 +217,64 @@ export default function App() {
               {isDark ? '☀️' : '🌙'}
             </button>
 
-            <button
-              id="lang-toggle-btn"
-              onClick={() => setLang(lang === 'ko' ? 'tr' : 'ko')}
-              title={lang === 'ko' ? 'Türkçe' : '한국어'}
+            {/* 언어 스위치 */}
+            <div
+              className="flex items-center gap-1 p-1 rounded-full cursor-pointer relative"
               style={{
+                background: lang === 'ko' ? 'var(--bg-input)' : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${lang === 'ko' ? 'var(--border)' : 'rgba(239, 68, 68, 0.3)'}`,
+                transition: 'all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1)',
+                width: 140,
                 height: 36,
-                borderRadius: 10,
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-light)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '0 10px',
-                color: 'var(--text-primary)',
-                transition: 'background 0.2s, transform 0.2s',
-                flexShrink: 0,
-                letterSpacing: '0.02em',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              onClick={() => setLang(lang === 'ko' ? 'tr' : 'ko')}
+              title={lang === 'ko' ? 'Switch to Türkçe' : '한국어로 전환'}
             >
-              {lang === 'ko' ? 'Türkçe' : '한국어'}
-            </button>
+              {/* 애니메이션 썸 (Thumb) */}
+              <div
+                className="absolute rounded-full shadow-sm"
+                style={{
+                  top: 3,
+                  bottom: 3,
+                  width: 'calc(50% - 4px)',
+                  left: lang === 'ko' ? 3 : 'calc(50% + 1px)',
+                  background: lang === 'ko' ? 'var(--bg-card)' : '#ef4444',
+                  border: lang === 'ko' ? '1px solid var(--border)' : 'none',
+                  transition: 'all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1)',
+                  zIndex: 0,
+                }}
+              />
+              <span
+                className="flex-1 text-center text-xs font-bold relative z-10"
+                style={{
+                  color: lang === 'ko' ? 'var(--text-primary)' : 'var(--text-muted)',
+                  transition: 'color 0.4s',
+                }}
+              >
+                한국어
+              </span>
+              <span
+                className="flex-1 text-center text-xs font-bold relative z-10"
+                style={{
+                  color: lang === 'tr' ? '#ffffff' : 'var(--text-muted)',
+                  transition: 'color 0.4s',
+                }}
+              >
+                Türkçe
+              </span>
+            </div>
           </div>
         </div>
       </header>
 
       {/* 메인 레이아웃 */}
-      <main className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        <div className="flex gap-6 app-main-columns" style={{ alignItems: 'flex-start' }}>
+      <main className="max-w-[1360px] mx-auto px-6 py-8 relative z-10">
+        <div className="flex gap-5 app-main-columns" style={{ alignItems: 'flex-start' }}>
 
           {/* ─── 왼쪽 패널 ─── */}
           <aside
             className="app-sidebar flex flex-col gap-5"
-            style={{ width: 320, flexShrink: 0 }}
+            style={{ width: 340, flexShrink: 0 }}
           >
             {/* 텍스트 입력 */}
             <div className="glass-card p-5">
@@ -324,6 +345,43 @@ export default function App() {
               )}
             </div>
 
+            {/* 모드 선택 벤토 */}
+            <div className="glass-card p-4">
+              <span className="text-xs font-bold mb-3 block" style={{ color: 'var(--text-secondary)' }}>
+                {t('mode.title')}
+              </span>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('mode.title')}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={renderMode === 'classic'}
+                  onClick={() => setRenderMode('classic')}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-semibold"
+                  style={{
+                    background: renderMode === 'classic' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
+                    border: `1.5px solid ${renderMode === 'classic' ? 'var(--accent)' : 'var(--border)'}`,
+                    color: renderMode === 'classic' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  }}
+                >
+                  {t('mode.classic')}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={renderMode === 'grid'}
+                  onClick={() => setRenderMode('grid')}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-semibold"
+                  style={{
+                    background: renderMode === 'grid' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
+                    border: `1.5px solid ${renderMode === 'grid' ? 'var(--accent)' : 'var(--border)'}`,
+                    color: renderMode === 'grid' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  }}
+                >
+                  {t('mode.grid')}
+                </button>
+              </div>
+            </div>
+
             {/* 탭 패널 */}
             <div className="glass-card overflow-hidden">
               {/* 탭 헤더 */}
@@ -342,7 +400,7 @@ export default function App() {
                     id={`tab-${tab.id}`}
                     style={{
                       flex: 1,
-                      padding: '12px 8px',
+                      padding: '12px 6px',
                       fontSize: 12,
                       fontWeight: activeTab === tab.id ? 700 : 400,
                       color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
@@ -353,6 +411,9 @@ export default function App() {
                         ? '2px solid var(--accent)'
                         : '2px solid transparent',
                       transition: 'all 0.2s',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
                     {tab.label}
@@ -361,7 +422,7 @@ export default function App() {
               </div>
 
               {/* 탭 내용 */}
-              <div className="p-5">
+              <div className="p-5 tab-content-container">
                 {activeTab === 'color' && (
                   <div className="fade-in">
                     <ColorPicker
@@ -382,7 +443,7 @@ export default function App() {
                 )}
                 {activeTab === 'export' && (
                   <div className="fade-in">
-                    <ExportPanel text={text} colors={colors} layerOrder={currentLayerOrder} />
+                    <ExportPanel text={text} colors={colors} layerOrder={currentLayerOrder} renderMode={renderMode} />
                   </div>
                 )}
               </div>
@@ -503,6 +564,7 @@ export default function App() {
                           displaySize={previewSize}
                           fontRevision={fontRevision}
                           layerOrder={currentLayerOrder}
+                          renderMode={renderMode}
                         />
                       ))}
                     </div>
@@ -525,7 +587,7 @@ export default function App() {
                     return (
                       <div
                         key={i}
-                        className="flex items-center gap-4 p-3 rounded-xl"
+                        className="flex flex-wrap items-center gap-3 p-3 rounded-xl"
                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
                       >
                         {/* 글자 */}
@@ -655,9 +717,9 @@ export default function App() {
         className="text-center py-6 mt-4 relative z-10"
         style={{ borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 12 }}
       >
-        Woo Jiin · Bae Gichan
+        Bae Gichan 배기찬 · Woo Jiin 우지인
         <span className="mx-2">·</span>
-        © 2026
+        2026
       </footer>
     </div>
   );

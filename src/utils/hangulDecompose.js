@@ -27,6 +27,12 @@ export const JONGSEONG_LIST = [
 // 수직 모음 (중성이 오른쪽에 배치되는 모음들)
 export const VERTICAL_VOWELS = new Set([0,1,2,3,4,5,6,7,20]); // ㅏㅐㅑㅒㅓㅔㅕㅖㅣ
 
+// 수평 모음 (중성이 아래쪽에 배치되는 모음들)
+export const HORIZONTAL_VOWELS = new Set([8, 12, 13, 17, 18]); // ㅗㅛㅜㅠㅡ
+
+// 이중 모음 / 복합 모음 (ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ ㅢ)
+export const DIPHTHONG_VOWELS = new Set([9, 10, 11, 14, 15, 16, 19]);
+
 /**
  * 한글 음절인지 확인
  */
@@ -53,6 +59,8 @@ export function decomposeHangul(char) {
     jongseong: { index: jongseong, jamo: JONGSEONG_LIST[jongseong] },
     hasJongseong: jongseong > 0,
     isVerticalVowel: VERTICAL_VOWELS.has(jungseong),
+    isHorizontalVowel: HORIZONTAL_VOWELS.has(jungseong),
+    isDiphthong: DIPHTHONG_VOWELS.has(jungseong),
   };
 }
 

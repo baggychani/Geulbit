@@ -47,14 +47,23 @@ function buildExportBaseName(text) {
   return sanitized || 'hangul';
 }
 
-export default function ExportPanel({ text, colors, layerOrder }) {
+export default function ExportPanel({ text, colors, layerOrder, renderMode = 'classic' }) {
   const t = useT();
   const [outputSize, setOutputSize] = useState(800);
   const [useZip, setUseZip] = useState(true);
+  const [deduplicate, setDeduplicate] = useState(true);
   const [exporting, setExporting] = useState(null);
   const [message, setMessage] = useState(null);
 
-  const syllables = parseText(text || '').filter(t => t.isHangul);
+  let syllables = parseText(text || '').filter(t => t.isHangul);
+  if (deduplicate) {
+    const seen = new Set();
+    syllables = syllables.filter(syl => {
+      if (seen.has(syl.char)) return false;
+      seen.add(syl.char);
+      return true;
+    });
+  }
   const exportBaseName = buildExportBaseName(text);
 
   const showMessage = (msg, type = 'success') => {
@@ -78,18 +87,18 @@ export default function ExportPanel({ text, colors, layerOrder }) {
     setExporting('png');
     try {
       if (syllables.length === 1) {
-        const blob = await exportPNG(syllables[0].char, colors, outputSize, layerOrder);
+        const blob = await exportPNG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
         if (!blob) throw new Error('PNG 변환 실패');
         downloadBlob(blob, `hangul_${syllables[0].char}_${outputSize}px.png`);
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
-          const b = await exportPNG(char, colors, outputSize, layerOrder);
+          const b = await exportPNG(char, colors, outputSize, layerOrder, renderMode);
           if (b) zip.file(`hangul_${char}_${outputSize}px.png`, b);
         });
         downloadBlob(blob, `${exportBaseName}_png.zip`);
       } else {
         for (const syl of syllables) {
-          const blob = await exportPNG(syl.char, colors, outputSize, layerOrder);
+          const blob = await exportPNG(syl.char, colors, outputSize, layerOrder, renderMode);
           if (blob) {
             downloadBlob(blob, `hangul_${syl.char}_${outputSize}px.png`);
             await delay(200);
@@ -102,7 +111,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder, renderMode]);
 
   const handleExportSVG = useCallback(async () => {
     if (syllables.length === 0) {
@@ -112,19 +121,19 @@ export default function ExportPanel({ text, colors, layerOrder }) {
     setExporting('svg');
     try {
       if (syllables.length === 1) {
-        const svgStr = exportSVG(syllables[0].char, colors, outputSize, layerOrder);
+        const svgStr = exportSVG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
         if (!svgStr) throw new Error('SVG 생성 실패');
         const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
         downloadBlob(blob, `hangul_${syllables[0].char}.svg`);
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
-          const svgStr = exportSVG(char, colors, outputSize, layerOrder);
+          const svgStr = exportSVG(char, colors, outputSize, layerOrder, renderMode);
           if (svgStr) zip.file(`hangul_${char}.svg`, svgStr);
         });
         downloadBlob(blob, `${exportBaseName}_svg.zip`);
       } else {
         for (const syl of syllables) {
-          const svgStr = exportSVG(syl.char, colors, outputSize, layerOrder);
+          const svgStr = exportSVG(syl.char, colors, outputSize, layerOrder, renderMode);
           if (svgStr) {
             const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
             downloadBlob(blob, `hangul_${syl.char}.svg`);
@@ -138,7 +147,7 @@ export default function ExportPanel({ text, colors, layerOrder }) {
       showMessage(`오류: ${err.message}`, 'error');
     }
     setExporting(null);
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, exportBaseName, layerOrder, renderMode]);
 
 
   return (
@@ -166,9 +175,10 @@ export default function ExportPanel({ text, colors, layerOrder }) {
         </div>
       </div>
 
-      {syllables.length > 1 && (
-        <div className="export-zip-block">
-          <span className="label-text block mb-2">{t('export.multiTitle')}</span>
+      <div className="export-zip-block">
+        <span className="label-text block mb-3">{t('export.multiTitle')}</span>
+        
+        <div className="flex flex-col gap-3">
           <label className="flex items-start gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
             <input
               type="checkbox"
@@ -188,8 +198,26 @@ export default function ExportPanel({ text, colors, layerOrder }) {
               </span>
             </span>
           </label>
+
+          <label className="flex items-start gap-2 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+            <input
+              type="checkbox"
+              checked={deduplicate}
+              onChange={e => setDeduplicate(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+            />
+            <span className="flex-1 min-w-0">
+              {t('export.dedupeLabel')}
+              <span
+                className="block text-xs mt-1 export-zip-hint"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {t('export.dedupeHint')}
+              </span>
+            </span>
+          </label>
         </div>
-      )}
+      </div>
 
       <div
         className="flex items-center gap-2 px-3 py-2 rounded-lg"
@@ -208,10 +236,22 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           onClick={handleExportPNG}
           disabled={!!exporting || syllables.length === 0}
           id="export-png-btn"
-          style={{ opacity: exporting ? 0.7 : 1 }}
         >
-          {exporting === 'png' ? <span className="animate-spin">⏳</span> : <span>🖼️</span>}
-          {t('export.pngDownload')}
+          <span className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0">
+            {exporting === 'png' ? (
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+          </span>
+          <span>{t('export.pngDownload')}</span>
         </button>
 
         <button
@@ -220,17 +260,29 @@ export default function ExportPanel({ text, colors, layerOrder }) {
           onClick={handleExportSVG}
           disabled={!!exporting || syllables.length === 0}
           id="export-svg-btn"
-          style={{ opacity: exporting ? 0.7 : 1 }}
         >
-          {exporting === 'svg' ? <span className="animate-spin">⏳</span> : <span>📐</span>}
-          {t('export.svgDownload')}
+          <span className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0">
+            {exporting === 'svg' ? (
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+          </span>
+          <span>{t('export.svgDownload')}</span>
         </button>
       </div>
 
       <div className="export-panel-feedback" aria-live="polite">
         {message ? (
           <div
-            className="text-sm px-3 py-2 rounded-lg fade-in text-center w-full"
+            className="text-sm px-3 py-2 rounded-lg text-center w-full transition-opacity duration-200"
             style={{
               background: message.type === 'error'
                 ? 'rgba(239,68,68,0.1)'

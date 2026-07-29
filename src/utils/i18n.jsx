@@ -17,7 +17,7 @@ const dict = {
   // ─── 헤더 ───
   'header.title': {
     ko: '글빛 — 한글 팔레트',
-    tr: 'Geulbit — Hangıl Paleti',
+    tr: 'Geulbit — Hangeul Paleti',
   },
   'header.subtitle': {
     ko: '초성·중성·종성 컬러 이미지 스튜디오',
@@ -69,7 +69,7 @@ const dict = {
   },
   'input.placeholder': {
     ko: '한글을 입력하세요\n예: 한글',
-    tr: 'Hangıl yazın\nÖrn: 한글',
+    tr: 'Hangeul yazın\nÖrn: 한글',
   },
   'input.examples': {
     ko: '예시:',
@@ -101,7 +101,7 @@ const dict = {
   },
   'preview.enterHangul': {
     ko: '왼쪽에 한글을 입력하세요',
-    tr: 'Sol panele Hangıl yazın',
+    tr: 'Sol panele Hangeul yazın',
   },
 
   // ─── 색상 범례 ───
@@ -140,22 +140,44 @@ const dict = {
     tr: 'Renk seç',
   },
 
-  // ─── Z-Order ───
+  // ─── 획 겹침 우선순위 ───
   'zorder.title': {
-    ko: '획 겹침 순서 (Z-Order)',
-    tr: 'Çizgi Katman Sırası (Z-Order)',
+    ko: '획 겹침 우선순위',
+    tr: 'Katman Önceliği',
+  },
+  'zorder.topHint': {
+    ko: '맨 위에 올릴 자소',
+    tr: 'En üstteki harf',
   },
   'zorder.choseong_top': {
-    ko: '초성 맨 위 (권장)',
-    tr: 'Başlangıç üstte (önerilen)',
+    ko: '초성',
+    tr: 'Başlangıç',
   },
   'zorder.jungseong_top': {
-    ko: '중성 맨 위',
-    tr: 'Orta üstte',
+    ko: '중성',
+    tr: 'Orta',
   },
   'zorder.jongseong_top': {
-    ko: '종성 맨 위',
-    tr: 'Son üstte',
+    ko: '종성',
+    tr: 'Son',
+  },
+  'zorder.recommended': {
+    ko: '권장',
+    tr: 'Önerilen',
+  },
+
+  // ─── 배치 모드 ───
+  'mode.title': {
+    ko: '배치 모드',
+    tr: 'Yerleşim Modu',
+  },
+  'mode.classic': {
+    ko: '기본 모아쓰기',
+    tr: 'Birleşik',
+  },
+  'mode.grid': {
+    ko: '자모 그리드',
+    tr: 'Harf Izgarası',
   },
 
   // ─── 음절 분석 ───
@@ -195,7 +217,7 @@ const dict = {
   },
   'howto.step1': {
     ko: '왼쪽 "글자 입력" 창에 한글을 입력합니다.',
-    tr: 'Sol paneldeki "Karakter Girişi" alanına Hangıl yazın.',
+    tr: 'Sol paneldeki "Karakter Girişi" alanına Hangeul yazın.',
   },
   'howto.step2': {
     ko: '"색상" 탭에서 초성·중성·종성의 색을 각각 설정하거나,',
@@ -228,8 +250,16 @@ const dict = {
     tr: 'Yüksek çöz.',
   },
   'export.multiTitle': {
-    ko: '여러 글자일 때',
-    tr: 'Birden fazla karakter',
+    ko: '내보내기 옵션',
+    tr: 'Dışa Aktarma Seçenekleri',
+  },
+  'export.dedupeLabel': {
+    ko: '중복 글자 건너뛰기 (권장)',
+    tr: 'Yinelenenleri atla (önerilen)',
+  },
+  'export.dedupeHint': {
+    ko: '같은 글자는 한 번만 내보냅니다.',
+    tr: 'Aynı karakteri yalnızca bir kez dışa aktarır.',
   },
   'export.zipLabel': {
     ko: 'ZIP 파일 하나로 받기 (권장)',
@@ -257,7 +287,7 @@ const dict = {
   },
   'export.noHangul': {
     ko: '내보낼 한글이 없습니다.',
-    tr: 'Dışa aktarılacak Hangıl yok.',
+    tr: 'Dışa aktarılacak Hangeul yok.',
   },
   'export.pngStarted': {
     ko: 'PNG 다운로드를 시작했습니다.',

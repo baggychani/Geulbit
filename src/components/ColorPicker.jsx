@@ -17,7 +17,14 @@ const QUICK_COLORS = [
   '#FFE66D', '#A8EDEA', '#FED3D1', '#C3B1E1', '#1A1A1A', '#ffffff',
 ];
 
-export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseong_top', onLayerOrderChange }) {
+export default function ColorPicker({
+  colors,
+  onChange,
+  layerOrderKey = 'choseong_top',
+  onLayerOrderChange,
+  renderMode = 'classic',
+  onRenderModeChange,
+}) {
   const t = useT();
 
   const JAMO_LABELS = {
@@ -44,6 +51,7 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
   const handleHexInput = useCallback((type, raw) => {
     let value = raw;
     if (!value.startsWith('#')) value = '#' + value;
+    
     setHexInputs(prev => ({ ...prev, [type]: value }));
     if (isValidHex(value)) {
       onChange({ ...colors, [type]: value });
@@ -56,10 +64,9 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
   }, [colors, onChange]);
 
   useEffect(() => {
-    setHexInputs({
-      choseong: colors.choseong,
-      jungseong: colors.jungseong,
-      jongseong: colors.jongseong,
+    setHexInputs(prev => {
+      if (prev.choseong === colors.choseong && prev.jungseong === colors.jungseong && prev.jongseong === colors.jongseong) return prev;
+      return { ...colors };
     });
   }, [colors]);
 
@@ -163,33 +170,63 @@ export default function ColorPicker({ colors, onChange, layerOrderKey = 'choseon
         </div>
       ))}
 
-      {/* 레이어 겹침 순서 (Z-Order) */}
-      <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-2">
-        <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
-          {t('zorder.title')}
-        </span>
-        <div className="flex flex-col gap-1.5">
-          {Object.values(LAYER_ORDERS).map((opt) => (
-            <label
-              key={opt.id}
-              className="flex items-center gap-2 text-xs p-2 rounded-lg cursor-pointer transition-colors"
-              style={{
-                background: layerOrderKey === opt.id ? 'rgba(124,111,247,0.15)' : 'var(--bg-input)',
-                border: `1px solid ${layerOrderKey === opt.id ? 'var(--accent)' : 'var(--border)'}`,
-                color: layerOrderKey === opt.id ? 'var(--accent-light)' : 'var(--text-primary)',
-              }}
-            >
-              <input
-                type="radio"
-                name="layerOrder"
-                value={opt.id}
-                checked={layerOrderKey === opt.id}
-                onChange={() => onLayerOrderChange && onLayerOrderChange(opt.id)}
-                className="w-3.5 h-3.5"
-              />
-              <span className="font-semibold">{t('zorder.' + opt.id)}</span>
-            </label>
-          ))}
+      {/* 획 겹침 우선순위 */}
+      <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
+            {t('zorder.title')}
+          </span>
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            {t('zorder.topHint')}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('zorder.title')}>
+          {[
+            { id: 'choseong_top', type: 'choseong', isRecommended: true },
+            { id: 'jungseong_top', type: 'jungseong', isRecommended: false },
+            { id: 'jongseong_top', type: 'jongseong', isRecommended: false },
+          ].map((opt) => {
+            const active = layerOrderKey === opt.id;
+            const jamoColor = colors[opt.type];
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onLayerOrderChange && onLayerOrderChange(opt.id)}
+                className="relative flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl transition-all duration-200 cursor-pointer whitespace-nowrap"
+                style={{
+                  background: active ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
+                  border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                  color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: active ? '0 2px 10px rgba(124, 111, 247, 0.2)' : 'none',
+                }}
+              >
+                {opt.isRecommended && (
+                  <span
+                    className="absolute -top-1.5 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: 'var(--accent)',
+                      color: '#ffffff',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                    }}
+                  >
+                    {t('zorder.recommended')}
+                  </span>
+                )}
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor: jamoColor,
+                    boxShadow: active ? `0 0 6px ${jamoColor}` : 'none',
+                  }}
+                />
+                <span className="text-xs font-semibold">{t('zorder.' + opt.id)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

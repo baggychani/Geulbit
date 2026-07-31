@@ -16,7 +16,7 @@ import LogoMark from './components/LogoMark';
 import { useFontManager } from './hooks/useFontManager';
 
 // 예시 텍스트
-const EXAMPLE_TEXTS = ['한글', '사랑', '학교', '봄날'];
+const EXAMPLE_TEXTS = ['한글', '사랑', '봄날', '과일'];
 const LANGUAGE_OPTIONS = [
   { id: 'ko', label: '한국어', activeColor: 'var(--bg-card)', activeTextColor: 'var(--text-primary)', activeBorder: '1px solid var(--border)' },
   { id: 'en', label: 'English', activeColor: '#2563eb', activeTextColor: '#ffffff', activeBorder: '1px solid #3b82f6' },

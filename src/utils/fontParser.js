@@ -17,6 +17,7 @@ import { decomposeHangul, classifyComponents } from './hangulDecompose.js';
 // 이중모음은 초성의 작은 칸을 조금 넓히되, 자소 크기는 별도로 강제 보정하지 않는다.
 export const DIPHTHONG_INITIAL_SPLIT_X = 110;
 
+
 let loadedFont = null;
 /** URL → 파싱된 폰트 (전환 시 재 fetch/parse 방지) */
 const fontCache = new Map();
@@ -25,12 +26,12 @@ let bundledFontsPromise = null;
 /** 번들 폰트 (public/) */
 export const FONT_VARIANTS = {
   regular: {
-    url: '/UnDotum.ttf',
+    url: import.meta.env.BASE_URL + 'UnDotum.ttf',
     label: '일반',
     displayName: 'UnDotum',
   },
   bold: {
-    url: '/UnDotumBold.ttf',
+    url: import.meta.env.BASE_URL + 'UnDotumBold.ttf',
     label: '굵게',
     displayName: 'UnDotum Bold',
   },

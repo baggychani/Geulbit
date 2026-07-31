@@ -14,6 +14,7 @@
     --accent: #7c6ff7;
     --accent-glow: rgba(124, 111, 247, 0.3);
     --bg-glass: rgba(30, 33, 48, 0.85);
+    --preview-solid-bg: #252840;
   }
 
   :root.light {
@@ -29,6 +30,7 @@
     --accent: #6557f0;
     --accent-glow: rgba(101, 87, 240, 0.2);
     --bg-glass: rgba(255, 255, 255, 0.85);
+    --preview-solid-bg: #ffffff;
   }
 
   * {
@@ -436,6 +438,62 @@
     color: var(--text-secondary);
   }
 
+  .preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .preview-background-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 36px;
+    padding: 3px;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--bg-input);
+  }
+
+  .preview-background-toggle button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .preview-background-toggle button.active {
+    border-color: var(--accent);
+    background: rgba(124, 111, 247, 0.14);
+  }
+
+  .preview-background-toggle button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .preview-background-swatch {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+  }
+
+  .preview-background-swatch-checker {
+    background-image: repeating-conic-gradient(#8d96af 0% 25%, #c4cad9 0% 50%);
+    background-size: 8px 8px;
+  }
+
+  .preview-background-swatch-solid {
+    background: var(--preview-solid-bg);
+  }
+
   .syllable-cell {
     flex-shrink: 0;
     display: flex;
@@ -615,6 +673,10 @@
 
   :root.light .preview-bg-checker {
     background-image: repeating-conic-gradient(#d4d8e8 0% 25%, #eaedf5 0% 50%);
+  }
+
+  .preview-bg-solid {
+    background: var(--preview-solid-bg);
   }
 
   .shimmer {

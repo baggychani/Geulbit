@@ -6,8 +6,7 @@
  * - 색상 미리보기 스와치
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { LAYER_ORDERS } from '../utils/fontParser';
+import { useState, useCallback, useEffect } from 'react';
 import { useT } from '../utils/i18n';
 
 // 사전 정의 빠른 선택 색상
@@ -22,8 +21,6 @@ export default function ColorPicker({
   onChange,
   layerOrderKey = 'choseong_top',
   onLayerOrderChange,
-  renderMode = 'classic',
-  onRenderModeChange,
 }) {
   const t = useT();
 

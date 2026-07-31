@@ -3,8 +3,8 @@
  * 한글 모아쓰기 색채 분리 도구 — 메인 앱
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { preloadBundledFonts, setActiveFont, FONT_VARIANTS, LAYER_ORDERS } from './utils/fontParser';
+import { useState, useEffect, useCallback } from 'react';
+import { FONT_VARIANTS, LAYER_ORDERS } from './utils/fontParser';
 import { parseText } from './utils/hangulDecompose';
 import { DEFAULT_COLORS, PREVIEW_SIZES } from './utils/colorTemplates';
 import { useT, useLang } from './utils/i18n';
@@ -13,20 +13,29 @@ import ColorPicker from './components/ColorPicker';
 import TemplateSelector from './components/TemplateSelector';
 import ExportPanel from './components/ExportPanel';
 import LogoMark from './components/LogoMark';
+import { useFontManager } from './hooks/useFontManager';
 
 // 예시 텍스트
 const EXAMPLE_TEXTS = ['한글', '사랑', '학교', '봄날'];
+const LANGUAGE_OPTIONS = [
+  { id: 'ko', label: '한국어', activeColor: 'var(--bg-card)', activeTextColor: 'var(--text-primary)', activeBorder: '1px solid var(--border)' },
+  { id: 'en', label: 'English', activeColor: '#2563eb', activeTextColor: '#ffffff', activeBorder: '1px solid #3b82f6' },
+  { id: 'tr', label: 'Türkçe', activeColor: '#e11d48', activeTextColor: '#ffffff', activeBorder: '1px solid #fb7185' },
+];
 
 export default function App() {
   const t = useT();
   const [lang, setLang] = useLang();
-  const [fontReady, setFontReady] = useState(false);
-  const [fontError, setFontError] = useState(null);
-  const [fontLoading, setFontLoading] = useState(true);
-  const [fontInfo, setFontInfo] = useState(null);
-  const [fontVariant, setFontVariant] = useState('bold');
-  const [fontRevision, setFontRevision] = useState(0);
-  const [fontsPreloaded, setFontsPreloaded] = useState(false);
+  const {
+    fontError,
+    fontInfo,
+    fontLoading,
+    fontReady,
+    fontRevision,
+    fontVariant,
+    fontsPreloaded,
+    setFontVariant,
+  } = useFontManager();
 
   const [text, setText] = useState('');
   const [colors, setColors] = useState(DEFAULT_COLORS);
@@ -37,61 +46,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
   const [previewSizeId, setPreviewSizeId] = useState('M');
   const [renderMode, setRenderMode] = useState('classic'); // 'classic' | 'grid'
+  const [previewBackground, setPreviewBackground] = useState('checker'); // 'checker' | 'solid'
   const [isDark, setIsDark] = useState(false);
 
   // 다크/라이트 모드 적용
   useEffect(() => {
     document.documentElement.classList.toggle('light', !isDark);
   }, [isDark]);
-
-  // 일반·굵게 폰트 모두 미리 로드 (최초 1회)
-  useEffect(() => {
-    let cancelled = false;
-
-    async function initFonts() {
-      setFontLoading(true);
-      setFontError(null);
-      try {
-        await preloadBundledFonts();
-        if (cancelled) return;
-        // Promise.all 완료 순서와 무관하게 현재 굵기로 고정
-        setActiveFont(FONT_VARIANTS.bold.url);
-        setFontsPreloaded(true);
-        setFontReady(true);
-      } catch (err) {
-        if (cancelled) return;
-        console.error('[App] 폰트 로드 실패:', err);
-        setFontError(err.message);
-        setFontReady(false);
-      }
-      if (!cancelled) setFontLoading(false);
-    }
-
-    initFonts();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // 굵기 전환: 캐시된 폰트만 활성화 (네트워크/로딩 UI 없음)
-  useEffect(() => {
-    if (!fontsPreloaded) return;
-    const variant = FONT_VARIANTS[fontVariant];
-    try {
-      const font = setActiveFont(variant.url);
-      setFontInfo({
-        name: variant.displayName,
-        numGlyphs: font.numGlyphs,
-        unitsPerEm: font.unitsPerEm,
-      });
-      setFontRevision(r => r + 1);
-      setFontError(null);
-      setFontReady(true);
-    } catch (err) {
-      console.error('[App] 폰트 전환 실패:', err);
-      setFontError(err.message);
-    }
-  }, [fontVariant, fontsPreloaded]);
 
   const handleTemplateSelect = useCallback((template) => {
     setColors(template.colors);
@@ -110,6 +71,13 @@ export default function App() {
   const previewSize = PREVIEW_SIZES.find(s => s.id === previewSizeId)?.value ?? 160;
   const activeVariant = FONT_VARIANTS[fontVariant];
   const currentLayerOrder = LAYER_ORDERS[layerOrderKey]?.order || LAYER_ORDERS.choseong_top.order;
+  const activeLanguageIndex = LANGUAGE_OPTIONS.findIndex(option => option.id === lang);
+  const activeLanguage = LANGUAGE_OPTIONS[activeLanguageIndex] || LANGUAGE_OPTIONS[0];
+  const languageThumbTransform = [
+    'translateX(0)',
+    'translateX(calc(100% + 3px))',
+    'translateX(calc(200% + 6px))',
+  ][activeLanguageIndex] || 'translateX(0)';
 
   return (
     <div className="app-shell min-h-screen" style={{ background: 'var(--bg-primary)' }}>
@@ -217,51 +185,57 @@ export default function App() {
               {isDark ? '☀️' : '🌙'}
             </button>
 
-            {/* 언어 스위치 */}
+            {/* 언어 선택 */}
             <div
-              className="flex items-center gap-1 p-1 rounded-full cursor-pointer relative"
+              className="grid grid-cols-3 gap-1 p-1 rounded-full relative"
               style={{
-                background: lang === 'ko' ? 'var(--bg-input)' : 'rgba(239, 68, 68, 0.1)',
-                border: `1px solid ${lang === 'ko' ? 'var(--border)' : 'rgba(239, 68, 68, 0.3)'}`,
-                transition: 'all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1)',
-                width: 140,
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border)',
+                width: 204,
                 height: 36,
               }}
-              onClick={() => setLang(lang === 'ko' ? 'tr' : 'ko')}
-              title={lang === 'ko' ? 'Switch to Türkçe' : '한국어로 전환'}
+              role="group"
+              aria-label="Language"
             >
-              {/* 애니메이션 썸 (Thumb) */}
               <div
+                aria-hidden
                 className="absolute rounded-full shadow-sm"
                 style={{
                   top: 3,
                   bottom: 3,
-                  width: 'calc(50% - 4px)',
-                  left: lang === 'ko' ? 3 : 'calc(50% + 1px)',
-                  background: lang === 'ko' ? 'var(--bg-card)' : '#ef4444',
-                  border: lang === 'ko' ? '1px solid var(--border)' : 'none',
-                  transition: 'all 0.4s cubic-bezier(0.34, 1.2, 0.64, 1)',
+                  left: 3,
+                  width: 'calc((100% - 12px) / 3)',
+                  background: activeLanguage.activeColor,
+                  border: activeLanguage.activeBorder,
+                  transform: languageThumbTransform,
+                  transition: 'transform 0.42s cubic-bezier(0.34, 1.2, 0.64, 1), background 0.28s ease, border-color 0.28s ease',
                   zIndex: 0,
                 }}
               />
-              <span
-                className="flex-1 text-center text-xs font-bold relative z-10"
-                style={{
-                  color: lang === 'ko' ? 'var(--text-primary)' : 'var(--text-muted)',
-                  transition: 'color 0.4s',
-                }}
-              >
-                한국어
-              </span>
-              <span
-                className="flex-1 text-center text-xs font-bold relative z-10"
-                style={{
-                  color: lang === 'tr' ? '#ffffff' : 'var(--text-muted)',
-                  transition: 'color 0.4s',
-                }}
-              >
-                Türkçe
-              </span>
+              {LANGUAGE_OPTIONS.map(option => {
+                const active = lang === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setLang(option.id)}
+                    aria-pressed={active}
+                    className="text-center text-xs font-bold relative"
+                    style={{
+                      height: 28,
+                      borderRadius: 99,
+                      border: '1px solid transparent',
+                      background: 'transparent',
+                      color: active ? option.activeTextColor : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      transition: 'color 0.25s',
+                      zIndex: 1,
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -462,26 +436,51 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 미리보기 크기 */}
-                <div
-                  className="preview-size-toggle"
-                  role="group"
-                  aria-label="Preview size"
-                  data-active={previewSizeId}
-                >
-                  <div className="segmented-thumb" aria-hidden />
-                  {PREVIEW_SIZES.map(s => (
+                <div className="preview-toolbar">
+                  <div className="preview-background-toggle" role="group" aria-label="미리보기 배경">
                     <button
-                      key={s.id}
                       type="button"
-                      className={previewSizeId === s.id ? 'active' : ''}
-                      onClick={() => setPreviewSizeId(s.id)}
-                      id={`preview-size-${s.id}`}
-                      title={s.label}
+                      className={previewBackground === 'checker' ? 'active' : ''}
+                      onClick={() => setPreviewBackground('checker')}
+                      aria-label="투명 격자 배경"
+                      aria-pressed={previewBackground === 'checker'}
+                      title="투명 격자 배경"
                     >
-                      {s.label}
+                      <span className="preview-background-swatch preview-background-swatch-checker" aria-hidden />
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      className={previewBackground === 'solid' ? 'active' : ''}
+                      onClick={() => setPreviewBackground('solid')}
+                      aria-label="단색 배경"
+                      aria-pressed={previewBackground === 'solid'}
+                      title="단색 배경"
+                    >
+                      <span className="preview-background-swatch preview-background-swatch-solid" aria-hidden />
+                    </button>
+                  </div>
+
+                  {/* 미리보기 크기 */}
+                  <div
+                    className="preview-size-toggle"
+                    role="group"
+                    aria-label="Preview size"
+                    data-active={previewSizeId}
+                  >
+                    <div className="segmented-thumb" aria-hidden />
+                    {PREVIEW_SIZES.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={previewSizeId === s.id ? 'active' : ''}
+                        onClick={() => setPreviewSizeId(s.id)}
+                        id={`preview-size-${s.id}`}
+                        title={s.label}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -565,6 +564,7 @@ export default function App() {
                           fontRevision={fontRevision}
                           layerOrder={currentLayerOrder}
                           renderMode={renderMode}
+                          previewBackground={previewBackground}
                         />
                       ))}
                     </div>

@@ -7,12 +7,12 @@ IDE에서 이 파일을 실행하면:
 3. 브라우저 자동 열기
 """
 
+import os
 import subprocess
 import sys
-import os
+import threading
 import time
 import webbrowser
-import threading
 
 # 프로젝트 루트 (이 파일이 있는 폴더)
 ROOT = os.path.dirname(os.path.abspath(__file__))

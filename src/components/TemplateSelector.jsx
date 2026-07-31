@@ -3,7 +3,6 @@
  * 색 템플릿 선택 그리드
  */
 
-import React from 'react';
 import { COLOR_TEMPLATES } from '../utils/colorTemplates';
 import { useT } from '../utils/i18n';
 

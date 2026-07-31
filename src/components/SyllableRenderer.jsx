@@ -4,11 +4,11 @@
  * opentype.js composite glyph 분해 결과를 사용
  */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { extractJamoPaths, getFont, getGlyphBoundingBox, buildExportSVG, sortJamoPaths, DEFAULT_LAYER_ORDER, getAutoGridTransform } from '../utils/fontParser';
+import { useEffect, useState, useRef } from 'react';
+import { DIPHTHONG_INITIAL_SPLIT_X, extractJamoPaths, getFont, getGlyphBoundingBox, sortJamoPaths, DEFAULT_LAYER_ORDER, getAutoGridTransform } from '../utils/fontParser';
 import { decomposeHangul } from '../utils/hangulDecompose';
-import { PREVIEW_SIZE_MAX } from '../utils/colorTemplates';
 import { useT } from '../utils/i18n';
+import { exportPNG } from '../utils/imageExport';
 
 const RENDER_SIZE = 200; // 내부 렌더링 em 단위
 
@@ -23,6 +23,7 @@ export default function SyllableRenderer({
   fontRevision = 0,
   layerOrder = DEFAULT_LAYER_ORDER,
   renderMode = 'classic',
+  previewBackground = 'checker',
 }) {
   const [paths, setPaths] = useState(null);
   const [bbox, setBbox] = useState(null);
@@ -79,11 +80,11 @@ export default function SyllableRenderer({
       setError(err.message);
       setLoading(false);
     }
-  }, [char, fontRevision]);
+  }, [char, fontRevision, t]);
 
   if (!char) return null;
 
-  const isGridActive = renderMode === 'grid' && decomposed && !decomposed.isDiphthong;
+  const isGridActive = renderMode === 'grid' && decomposed;
 
   const viewBox = `0 0 ${RENDER_SIZE} ${RENDER_SIZE}`;
   let classicTransform = '';
@@ -137,7 +138,7 @@ export default function SyllableRenderer({
         style={{ width: displaySize, height: displaySize, transition: transitionStyle }}
       >
         <div
-          className="preview-bg-checker syllable-glyph-frame group relative flex items-center justify-center"
+          className={`${previewBackground === 'solid' ? 'preview-bg-solid' : 'preview-bg-checker'} syllable-glyph-frame group relative flex items-center justify-center`}
           style={{ width: displaySize, height: displaySize, transition: transitionStyle }}
         >
           {loading && (
@@ -180,6 +181,19 @@ export default function SyllableRenderer({
                     <>
                       <line x1="10" y1="70" x2="190" y2="70" />
                       <line x1="10" y1="130" x2="190" y2="130" />
+                    </>
+                  )}
+                  {decomposed.isDiphthong && !decomposed.hasJongseong && (
+                    <>
+                      <line x1="10" y1="100" x2={DIPHTHONG_INITIAL_SPLIT_X} y2="100" />
+                      <line x1={DIPHTHONG_INITIAL_SPLIT_X} y1="10" x2={DIPHTHONG_INITIAL_SPLIT_X} y2="100" />
+                    </>
+                  )}
+                  {decomposed.isDiphthong && decomposed.hasJongseong && (
+                    <>
+                      <line x1="10" y1="140" x2="190" y2="140" />
+                      <line x1="10" y1="80" x2={DIPHTHONG_INITIAL_SPLIT_X} y2="80" />
+                      <line x1={DIPHTHONG_INITIAL_SPLIT_X} y1="10" x2={DIPHTHONG_INITIAL_SPLIT_X} y2="140" />
                     </>
                   )}
                 </g>
@@ -274,48 +288,5 @@ export default function SyllableRenderer({
       </div>
     </div>
   );
-}
-
-/**
- * SVG 문자열 내보내기 (투명 배경)
- */
-export function exportSVG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER, renderMode = 'classic') {
-  return buildExportSVG(char, colors, outputSize, 200, layerOrder, renderMode);
-}
-
-/**
- * SVG → PNG Canvas 변환 (투명 배경)
- */
-export async function exportPNG(char, colors, outputSize = 300, layerOrder = DEFAULT_LAYER_ORDER, renderMode = 'classic') {
-  const svgString = exportSVG(char, colors, outputSize, layerOrder, renderMode);
-  if (!svgString) return null;
-
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = outputSize;
-    canvas.height = outputSize;
-    const ctx = canvas.getContext('2d');
-
-    ctx.clearRect(0, 0, outputSize, outputSize);
-
-    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, outputSize, outputSize);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(pngBlob => {
-        resolve(pngBlob);
-      }, 'image/png');
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('SVG → PNG 변환 실패'));
-    };
-
-    img.src = url;
-  });
 }
 

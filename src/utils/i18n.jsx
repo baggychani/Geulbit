@@ -1,6 +1,6 @@
 /**
  * i18n.js
- * 한국어(ko) / 터키어(tr) 하드코딩 번역 사전 + React Context
+ * 한국어(ko) / 영어(en) / 터키어(tr) 하드코딩 번역 사전 + React Context
  *
  * 사용법:
  *   import { I18nProvider, useT } from '../utils/i18n';
@@ -8,7 +8,7 @@
  *   <span>{t('header.title')}</span>
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 
 // ──────────────────────────────────────────────
 // 번역 사전
@@ -362,10 +362,112 @@ const dict = {
     ko: '한국어',
     tr: 'Korece',
   },
+  'lang.en': {
+    ko: '영어',
+    en: 'English',
+    tr: 'İngilizce',
+  },
   'lang.tr': {
     ko: 'Türkçe',
     tr: 'Türkçe',
   },
+};
+
+const english = {
+  'header.title': 'Geulbit — Hangeul Palette',
+  'header.subtitle': 'Initial · Medial · Final Color Image Studio',
+  'font.loading': 'Loading',
+  'font.error': 'Font error',
+  'font.loadingMsg': 'Loading font...',
+  'font.loadFailed': 'The font could not be loaded.',
+  'font.regular': 'Regular',
+  'font.bold': 'Bold',
+  'theme.toLight': 'Switch to light mode',
+  'theme.toDark': 'Switch to dark mode',
+  'input.title': 'Text input',
+  'input.placeholder': 'Enter Hangeul\nExample: 한글',
+  'input.examples': 'Examples:',
+  'tab.color': 'Colors',
+  'tab.template': 'Templates',
+  'tab.export': 'Export',
+  'preview.title': 'Preview',
+  'preview.syllableCount': 'syllables',
+  'preview.enterHangul': 'Enter Hangeul in the panel on the left',
+  'legend.choseong': 'Initial',
+  'legend.jungseong': 'Medial',
+  'legend.jongseong': 'Final (batchim)',
+  'color.choseong': 'Initial',
+  'color.jungseong': 'Medial',
+  'color.jongseong': 'Final',
+  'color.jongseongDesc': 'batchim',
+  'color.selectColor': 'Choose color',
+  'zorder.title': 'Stroke overlap order',
+  'zorder.topHint': 'Jamo rendered on top',
+  'zorder.choseong_top': 'Initial',
+  'zorder.jungseong_top': 'Medial',
+  'zorder.jongseong_top': 'Final',
+  'zorder.recommended': 'Recommended',
+  'mode.title': 'Layout mode',
+  'mode.classic': 'Combined syllable',
+  'mode.grid': 'Jamo grid',
+  'analysis.title': 'Syllable analysis',
+  'analysis.choseong': 'Initial',
+  'analysis.jungseong': 'Medial',
+  'analysis.jongseong': 'Final',
+  'analysis.noJongseong': 'Final: none',
+  'analysis.verticalVowel': '↕ Vertical vowel',
+  'analysis.horizontalVowel': '↔ Horizontal vowel',
+  'howto.title': 'How to use',
+  'howto.step1': 'Enter Hangeul in the “Text input” field on the left.',
+  'howto.step2': 'Set colors for the initial, medial, and final jamo in “Colors”, or',
+  'howto.step3': 'select a predefined color combination in “Templates”.',
+  'howto.step4': 'Check the color-separated syllables in the preview.',
+  'howto.step5': 'Download SVG or transparent PNG from “Export”.',
+  'export.outputSize': 'Output size',
+  'export.sizeDefault': 'Default',
+  'export.sizeHigh': 'High resolution',
+  'export.multiTitle': 'Export options',
+  'export.dedupeLabel': 'Skip duplicate characters (recommended)',
+  'export.dedupeHint': 'Exports each character only once.',
+  'export.zipLabel': 'Download as one ZIP file (recommended)',
+  'export.zipHintOn': 'PNG/SVG files at the selected size are saved in one ZIP.',
+  'export.zipHintOff': 'PNG/SVG files download in order for each character.',
+  'export.transparentNote': 'Transparent background · saved to your browser download folder',
+  'export.pngDownload': 'Download PNG',
+  'export.svgDownload': 'Download SVG',
+  'export.noHangul': 'There is no Hangeul to export.',
+  'export.pngStarted': 'PNG download started.',
+  'export.svgStarted': 'SVG download started.',
+  'export.inProgress': 'Exporting',
+  'export.cancel': 'Cancel',
+  'export.cancelled': 'Export cancelled.',
+  'export.failedChars': 'Characters that failed to convert',
+  'export.errorPrefix': 'Error',
+  'syllable.copyPNG': 'Copy PNG',
+  'syllable.copied': 'Copied!',
+  'syllable.copyError': 'Error',
+  'syllable.extractFail': 'Glyph extraction failed',
+  'tpl.기본': 'Classic',
+  'tpl.비비드': 'Vivid',
+  'tpl.파스텔': 'Pastel',
+  'tpl.흑백': 'Monochrome',
+  'tpl.웜톤': 'Warm',
+  'tpl.쿨톤': 'Cool',
+  'tpl.퍼플': 'Purple',
+  'tpl.네온': 'Neon',
+  'tpl.포레스트': 'Forest',
+  'tpl.민트': 'Mint',
+  'tpl.선셋': 'Sunset',
+  'tpl.오션': 'Ocean',
+  'tpl.코랄': 'Coral',
+  'tpl.잉크': 'Ink',
+  'tpl.캔디': 'Candy',
+  'tpl.가을': 'Autumn',
+  'tpl.하늘': 'Sky',
+  'tpl.말차': 'Matcha',
+  'lang.ko': 'Korean',
+  'lang.en': 'English',
+  'lang.tr': 'Turkish',
 };
 
 // ──────────────────────────────────────────────
@@ -383,7 +485,7 @@ const I18nContext = createContext({
 export function translate(key, lang = 'ko') {
   const entry = dict[key];
   if (!entry) return key;
-  return entry[lang] ?? entry.ko ?? key;
+  return entry[lang] ?? english[key] ?? entry.ko ?? key;
 }
 
 /**

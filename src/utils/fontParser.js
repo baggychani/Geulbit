@@ -12,10 +12,12 @@
  */
 
 import opentype from 'opentype.js';
-import { decomposeHangul, classifyComponents } from './hangulDecompose';
+import { decomposeHangul, classifyComponents } from './hangulDecompose.js';
+
+// 이중모음은 초성의 작은 칸을 조금 넓히되, 자소 크기는 별도로 강제 보정하지 않는다.
+export const DIPHTHONG_INITIAL_SPLIT_X = 110;
 
 let loadedFont = null;
-let loadedFontUrl = null;
 /** URL → 파싱된 폰트 (전환 시 재 fetch/parse 방지) */
 const fontCache = new Map();
 let bundledFontsPromise = null;
@@ -40,7 +42,6 @@ export const FONT_VARIANTS = {
 export async function loadFont(fontUrl = FONT_VARIANTS.regular.url, { force = false } = {}) {
   if (!force && fontCache.has(fontUrl)) {
     loadedFont = fontCache.get(fontUrl);
-    loadedFontUrl = fontUrl;
     return loadedFont;
   }
 
@@ -50,7 +51,6 @@ export async function loadFont(fontUrl = FONT_VARIANTS.regular.url, { force = fa
   const font = opentype.parse(buffer);
   fontCache.set(fontUrl, font);
   loadedFont = font;
-  loadedFontUrl = fontUrl;
 
   console.log('[FontParser] 폰트 로드 완료:', fontUrl, {
     numGlyphs: font.numGlyphs,
@@ -68,7 +68,6 @@ export function setActiveFont(fontUrl) {
     throw new Error(`폰트가 아직 캐시되지 않음: ${fontUrl}`);
   }
   loadedFont = font;
-  loadedFontUrl = fontUrl;
   return font;
 }
 
@@ -227,7 +226,7 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, l
   };
 
   const decomposed = decomposeHangul(char);
-  const isGridActive = renderMode === 'grid' && decomposed && !decomposed.isDiphthong;
+  const isGridActive = renderMode === 'grid' && decomposed;
 
   let viewBox = `0 0 ${fontSize} ${fontSize}`;
   if (!isGridActive && bb && isFinite(bb.x1)) {
@@ -256,6 +255,10 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, l
       gridSvgLines += `    <line x1="10" y1="100" x2="190" y2="100"/>\n`;
     } else if (decomposed.isHorizontalVowel && decomposed.hasJongseong) {
       gridSvgLines += `    <line x1="10" y1="70" x2="190" y2="70"/>\n    <line x1="10" y1="130" x2="190" y2="130"/>\n`;
+    } else if (decomposed.isDiphthong && !decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="10" y1="100" x2="${DIPHTHONG_INITIAL_SPLIT_X}" y2="100"/>\n    <line x1="${DIPHTHONG_INITIAL_SPLIT_X}" y1="10" x2="${DIPHTHONG_INITIAL_SPLIT_X}" y2="100"/>\n`;
+    } else if (decomposed.isDiphthong && decomposed.hasJongseong) {
+      gridSvgLines += `    <line x1="10" y1="140" x2="190" y2="140"/>\n    <line x1="10" y1="80" x2="${DIPHTHONG_INITIAL_SPLIT_X}" y2="80"/>\n    <line x1="${DIPHTHONG_INITIAL_SPLIT_X}" y1="10" x2="${DIPHTHONG_INITIAL_SPLIT_X}" y2="140"/>\n`;
     }
     gridSvgLines += `  </g>\n`;
   }
@@ -278,7 +281,7 @@ ${gridSvgLines}${pathEls}
 }
 
 export function getAutoGridTransform(decomposed, jpType, bounds, outerPad = 10, renderSize = 200) {
-  if (!decomposed || decomposed.isDiphthong || !bounds) return '';
+  if (!decomposed || !bounds) return '';
 
   let cell = null;
 
@@ -296,6 +299,13 @@ export function getAutoGridTransform(decomposed, jpType, bounds, outerPad = 10, 
     if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: renderSize - outerPad, y2: 70 };
     if (jpType === 'jungseong') cell = { x1: outerPad, y1: 70, x2: renderSize - outerPad, y2: 130 };
     if (jpType === 'jongseong') cell = { x1: outerPad, y1: 130, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  } else if (decomposed.isDiphthong && !decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: DIPHTHONG_INITIAL_SPLIT_X, y2: 100 };
+    if (jpType === 'jungseong') cell = { x1: outerPad, y1: outerPad, x2: renderSize - outerPad, y2: renderSize - outerPad };
+  } else if (decomposed.isDiphthong && decomposed.hasJongseong) {
+    if (jpType === 'choseong') cell = { x1: outerPad, y1: outerPad, x2: DIPHTHONG_INITIAL_SPLIT_X, y2: 80 };
+    if (jpType === 'jungseong') cell = { x1: outerPad, y1: outerPad, x2: renderSize - outerPad, y2: 140 };
+    if (jpType === 'jongseong') cell = { x1: outerPad, y1: 140, x2: renderSize - outerPad, y2: renderSize - outerPad };
   }
 
   if (!cell) return '';

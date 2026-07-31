@@ -3,9 +3,9 @@
  * SVG/PNG 내보내기 — 브라우저 기본 다운로드(다운로드 폴더)만 사용
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import JSZip from 'jszip';
-import { exportSVG, exportPNG } from './SyllableRenderer';
+import { exportSVG, exportPNG } from '../utils/imageExport';
 import { parseText } from '../utils/hangulDecompose';
 import { useT } from '../utils/i18n';
 
@@ -19,6 +19,22 @@ const SIZE_OPTIONS = [
 
 const EXPORT_CANCELLED = 'export-cancelled';
 const YIELD_EVERY = 4;
+const EXPORT_FORMATS = {
+  png: {
+    create: exportPNG,
+    errorMessage: 'PNG 변환 실패',
+    perFileDelay: 200,
+    successKey: 'export.pngStarted',
+    toBlob: (content) => content,
+  },
+  svg: {
+    create: exportSVG,
+    errorMessage: 'SVG 생성 실패',
+    perFileDelay: 150,
+    successKey: 'export.svgStarted',
+    toBlob: (content) => new Blob([content], { type: 'image/svg+xml;charset=utf-8' }),
+  },
+};
 
 /** Blob을 파일 이름으로 바로 다운로드 (File System Access API 미사용) */
 function downloadBlob(blob, filename) {
@@ -30,18 +46,25 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function throwIfExportCancelled(cancelRequested) {
+  if (!cancelRequested) return;
+  const error = new Error(EXPORT_CANCELLED);
+  error.code = EXPORT_CANCELLED;
+  throw error;
+}
+
 /** ZIP 파일명용: 입력 순서대로 한글만 이어 붙임 (예: 안녕하세요 → 안녕하세요) */
 function buildExportBaseName(text) {
   const sanitized = (text || '')
     .normalize('NFC')
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '')
+    .replace(/[<>:"/\\|?*\p{Cc}]/gu, '')
     .replace(/\s+/g, '-')
     .replace(/^[.\-\s]+|[.\-\s]+$/g, '')
     .slice(0, 80);
@@ -92,11 +115,7 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
     const zip = new JSZip();
     const failedChars = [];
     for (let index = 0; index < syllables.length; index += 1) {
-      if (cancelRequestedRef.current) {
-        const error = new Error(EXPORT_CANCELLED);
-        error.code = EXPORT_CANCELLED;
-        throw error;
-      }
+      throwIfExportCancelled(cancelRequestedRef.current);
 
       const char = syllables[index].char;
       try {
@@ -118,163 +137,78 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
     return zip.generateAsync({ type: 'blob' });
   }, [syllables, t]);
 
-  const handleExportPNG = useCallback(async () => {
+  const handleExport = useCallback(async (type) => {
+    const format = EXPORT_FORMATS[type];
     if (syllables.length === 0) {
       showMessage(t('export.noHangul'), 'error');
       return;
     }
     cancelRequestedRef.current = false;
-    setExporting('png');
+    setExporting(type);
     setExportProgress({ current: 0, total: syllables.length });
-    try {
-      if (syllables.length === 1) {
-        const blob = await exportPNG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
-        if (!blob) throw new Error('PNG 변환 실패');
-        downloadBlob(blob, buildExportFilename({
-          text,
-          char: syllables[0].char,
-          outputSize,
-          type: 'png',
-          renderMode,
-        }));
-        setExportProgress({ current: 1, total: 1 });
-      } else if (useZip) {
-        const blob = await exportManyAsZip(async (zip, char) => {
-          const b = await exportPNG(char, colors, outputSize, layerOrder, renderMode);
-          if (!b) return false;
-          zip.file(buildExportFilename({
-            text,
-            char,
-            outputSize,
-            type: 'png',
-            renderMode,
-          }), b);
-          return true;
-        });
-        downloadBlob(blob, buildExportFilename({ text, outputSize, type: 'png', renderMode, archive: true }));
-      } else {
-        const failedChars = [];
-        for (let index = 0; index < syllables.length; index += 1) {
-          if (cancelRequestedRef.current) {
-            const error = new Error(EXPORT_CANCELLED);
-            error.code = EXPORT_CANCELLED;
-            throw error;
-          }
-          const syl = syllables[index];
-          const blob = await exportPNG(syl.char, colors, outputSize, layerOrder, renderMode);
-          if (blob) {
-            downloadBlob(blob, buildExportFilename({
-              text,
-              char: syl.char,
-              outputSize,
-              type: 'png',
-              renderMode,
-            }));
-          } else failedChars.push(syl.char);
-          setExportProgress({ current: index + 1, total: syllables.length });
-          await delay(200);
-        }
-        if (failedChars.length > 0) throw new Error(`${t('export.failedChars')}: ${failedChars.join(', ')}`);
-      }
-      showMessage(t('export.pngStarted'));
-    } catch (err) {
-      if (err.code === EXPORT_CANCELLED) {
-        showMessage(t('export.cancelled'));
-        setExporting(null);
-        setExportProgress(null);
-        cancelRequestedRef.current = false;
-        return;
-      }
-      console.error(err);
-      showMessage(`${t('export.errorPrefix')}: ${err.message}`, 'error');
-    }
-    setExporting(null);
-    setExportProgress(null);
-    cancelRequestedRef.current = false;
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode]);
 
-  const handleExportSVG = useCallback(async () => {
-    if (syllables.length === 0) {
-      showMessage(t('export.noHangul'), 'error');
-      return;
-    }
-    cancelRequestedRef.current = false;
-    setExporting('svg');
-    setExportProgress({ current: 0, total: syllables.length });
+    const render = (char) => format.create(char, colors, outputSize, layerOrder, renderMode);
+    const downloadSingleFile = async (char) => {
+      const content = await render(char);
+      if (!content) return false;
+      downloadBlob(format.toBlob(content), buildExportFilename({
+        text,
+        char,
+        outputSize,
+        type,
+        renderMode,
+      }));
+      return true;
+    };
+
     try {
       if (syllables.length === 1) {
-        const svgStr = exportSVG(syllables[0].char, colors, outputSize, layerOrder, renderMode);
-        if (!svgStr) throw new Error('SVG 생성 실패');
-        const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-        downloadBlob(blob, buildExportFilename({
-          text,
-          char: syllables[0].char,
-          outputSize,
-          type: 'svg',
-          renderMode,
-        }));
+        if (!await downloadSingleFile(syllables[0].char)) throw new Error(format.errorMessage);
         setExportProgress({ current: 1, total: 1 });
       } else if (useZip) {
         const blob = await exportManyAsZip(async (zip, char) => {
-          const svgStr = exportSVG(char, colors, outputSize, layerOrder, renderMode);
-          if (!svgStr) return false;
+          const content = await render(char);
+          if (!content) return false;
           zip.file(buildExportFilename({
             text,
             char,
             outputSize,
-            type: 'svg',
+            type,
             renderMode,
-          }), svgStr);
+          }), format.toBlob(content));
           return true;
         });
-        downloadBlob(blob, buildExportFilename({ text, outputSize, type: 'svg', renderMode, archive: true }));
+        downloadBlob(blob, buildExportFilename({ text, outputSize, type, renderMode, archive: true }));
       } else {
         const failedChars = [];
         for (let index = 0; index < syllables.length; index += 1) {
-          if (cancelRequestedRef.current) {
-            const error = new Error(EXPORT_CANCELLED);
-            error.code = EXPORT_CANCELLED;
-            throw error;
-          }
-          const syl = syllables[index];
-          const svgStr = exportSVG(syl.char, colors, outputSize, layerOrder, renderMode);
-          if (svgStr) {
-            const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-            downloadBlob(blob, buildExportFilename({
-              text,
-              char: syl.char,
-              outputSize,
-              type: 'svg',
-              renderMode,
-            }));
-          } else failedChars.push(syl.char);
+          throwIfExportCancelled(cancelRequestedRef.current);
+          const succeeded = await downloadSingleFile(syllables[index].char);
+          if (!succeeded) failedChars.push(syllables[index].char);
           setExportProgress({ current: index + 1, total: syllables.length });
-          await delay(150);
+          await delay(format.perFileDelay);
         }
         if (failedChars.length > 0) throw new Error(`${t('export.failedChars')}: ${failedChars.join(', ')}`);
       }
-      showMessage(t('export.svgStarted'));
-    } catch (err) {
-      if (err.code === EXPORT_CANCELLED) {
+      showMessage(t(format.successKey));
+    } catch (error) {
+      if (error.code === EXPORT_CANCELLED) {
         showMessage(t('export.cancelled'));
-        setExporting(null);
-        setExportProgress(null);
-        cancelRequestedRef.current = false;
-        return;
+      } else {
+        console.error(error);
+        const message = error instanceof Error ? error.message : String(error);
+        showMessage(`${t('export.errorPrefix')}: ${message}`, 'error');
       }
-      console.error(err);
-      showMessage(`${t('export.errorPrefix')}: ${err.message}`, 'error');
+    } finally {
+      setExporting(null);
+      setExportProgress(null);
+      cancelRequestedRef.current = false;
     }
-    setExporting(null);
-    setExportProgress(null);
-    cancelRequestedRef.current = false;
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode, t]);
 
   const handleCancelExport = useCallback(() => {
     cancelRequestedRef.current = true;
   }, []);
-
-
   return (
     <div className="export-panel flex flex-col gap-4">
       <div>
@@ -392,7 +326,7 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
         <button
           type="button"
           className="btn-primary w-full justify-center"
-          onClick={handleExportPNG}
+          onClick={() => handleExport('png')}
           disabled={!!exporting || syllables.length === 0}
           id="export-png-btn"
         >
@@ -416,7 +350,7 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
         <button
           type="button"
           className="btn-secondary w-full justify-center"
-          onClick={handleExportSVG}
+          onClick={() => handleExport('svg')}
           disabled={!!exporting || syllables.length === 0}
           id="export-svg-btn"
         >

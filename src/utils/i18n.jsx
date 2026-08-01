@@ -51,6 +51,10 @@ const dict = {
     ko: '굵게',
     tr: 'Kalın',
   },
+  'font.weight': {
+    ko: '글꼴 굵기',
+    tr: 'Yazı tipi kalınlığı',
+  },
 
   // ─── 테마 ───
   'theme.toLight': {
@@ -103,6 +107,22 @@ const dict = {
     ko: '왼쪽에 한글을 입력하세요',
     tr: 'Sol panele Hangeul yazın',
   },
+  'preview.background': {
+    ko: '미리보기 배경',
+    tr: 'Önizleme arka planı',
+  },
+  'preview.checkerBackground': {
+    ko: '투명 격자 배경',
+    tr: 'Saydam dama arka planı',
+  },
+  'preview.solidBackground': {
+    ko: '단색 배경',
+    tr: 'Düz renk arka planı',
+  },
+  'preview.size': {
+    ko: '미리보기 크기',
+    tr: 'Önizleme boyutu',
+  },
 
   // ─── 색상 범례 ───
   'legend.choseong': {
@@ -115,7 +135,7 @@ const dict = {
   },
   'legend.jongseong': {
     ko: '종성 (받침)',
-    tr: 'Son (Batchim)',
+    tr: 'Son (batchim)',
   },
 
   // ─── ColorPicker ───
@@ -133,7 +153,7 @@ const dict = {
   },
   'color.jongseongDesc': {
     ko: '받침',
-    tr: 'Batchim',
+    tr: 'batchim',
   },
   'color.selectColor': {
     ko: '색상 선택',
@@ -220,12 +240,12 @@ const dict = {
     tr: 'Sol paneldeki "Karakter Girişi" alanına Hangeul yazın.',
   },
   'howto.step2': {
-    ko: '"색상" 탭에서 초성·중성·종성의 색을 각각 설정하거나,',
-    tr: '"Renk" sekmesinden Başlangıç·Orta·Son renklerini ayarlayın veya',
+    ko: '"색상" 탭에서 초성·중성·종성의 색을 각각 설정합니다.',
+    tr: '"Renk" sekmesinden Başlangıç·Orta·Son renklerini ayarlayın.',
   },
   'howto.step3': {
-    ko: '"템플릿" 탭에서 미리 정의된 색 조합을 선택합니다.',
-    tr: '"Şablon" sekmesinden hazır renk kombinasyonlarını seçin.',
+    ko: '또는 "템플릿" 탭에서 미리 정의된 색 조합을 선택합니다.',
+    tr: 'Ya da "Şablon" sekmesinden hazır renk kombinasyonlarını seçin.',
   },
   'howto.step4': {
     ko: '미리보기에서 색채가 분리된 글자를 확인합니다.',
@@ -247,7 +267,7 @@ const dict = {
   },
   'export.sizeHigh': {
     ko: '고해상',
-    tr: 'Yüksek çöz.',
+    tr: 'Yüksek çözünürlük',
   },
   'export.multiTitle': {
     ko: '내보내기 옵션',
@@ -334,7 +354,7 @@ const dict = {
   },
   'syllable.extractFail': {
     ko: '글리프 추출 실패',
-    tr: 'Glif çıkarma başarısız',
+    tr: 'Glif çıkarılamadı.',
   },
 
   // ─── 템플릿 이름 ───
@@ -362,6 +382,10 @@ const dict = {
     ko: '한국어',
     tr: 'Korece',
   },
+  'lang.selector': {
+    ko: '언어',
+    tr: 'Dil',
+  },
   'lang.en': {
     ko: '영어',
     en: 'English',
@@ -382,6 +406,7 @@ const english = {
   'font.loadFailed': 'The font could not be loaded.',
   'font.regular': 'Regular',
   'font.bold': 'Bold',
+  'font.weight': 'Font weight',
   'theme.toLight': 'Switch to light mode',
   'theme.toDark': 'Switch to dark mode',
   'input.title': 'Text input',
@@ -393,6 +418,10 @@ const english = {
   'preview.title': 'Preview',
   'preview.syllableCount': 'syllables',
   'preview.enterHangul': 'Enter Hangeul in the panel on the left',
+  'preview.background': 'Preview background',
+  'preview.checkerBackground': 'Transparent checkerboard background',
+  'preview.solidBackground': 'Solid background',
+  'preview.size': 'Preview size',
   'legend.choseong': 'Initial',
   'legend.jungseong': 'Medial',
   'legend.jongseong': 'Final (batchim)',
@@ -419,8 +448,8 @@ const english = {
   'analysis.horizontalVowel': '↔ Horizontal vowel',
   'howto.title': 'How to use',
   'howto.step1': 'Enter Hangeul in the “Text input” field on the left.',
-  'howto.step2': 'Set colors for the initial, medial, and final jamo in “Colors”, or',
-  'howto.step3': 'select a predefined color combination in “Templates”.',
+  'howto.step2': 'Set colors for the initial, medial, and final jamo in “Colors”.',
+  'howto.step3': 'Or select a predefined color combination in “Templates”.',
   'howto.step4': 'Check the color-separated syllables in the preview.',
   'howto.step5': 'Download SVG or transparent PNG from “Export”.',
   'export.outputSize': 'Output size',
@@ -466,6 +495,7 @@ const english = {
   'tpl.하늘': 'Sky',
   'tpl.말차': 'Matcha',
   'lang.ko': 'Korean',
+  'lang.selector': 'Language',
   'lang.en': 'English',
   'lang.tr': 'Turkish',
 };

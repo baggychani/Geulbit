@@ -71,10 +71,11 @@ function buildExportBaseName(text) {
   return sanitized || '한글';
 }
 
-function buildExportFilename({ text, char, outputSize, type, renderMode, archive = false }) {
+function buildExportFilename({ text, char, outputSize, type, renderMode, archive = false, sourceIndex = null }) {
   const modePrefix = renderMode === 'grid' ? '자모그리드' : '모아쓰기';
   const target = char || buildExportBaseName(text);
-  const base = `${modePrefix}_${target}`;
+  const sequenceSuffix = sourceIndex == null ? '' : `_${sourceIndex + 1}`;
+  const base = `${modePrefix}_${target}${sequenceSuffix}`;
 
   if (archive) {
     return type === 'png'
@@ -118,13 +119,18 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
       throwIfExportCancelled(cancelRequestedRef.current);
 
       const char = syllables[index].char;
+      let added = false;
+      let failed = false;
       try {
-        const added = await addToZip(zip, char);
-        if (!added) failedChars.push(char);
+        added = await addToZip(zip, char, index);
       } catch (error) {
+        if (error.code === EXPORT_CANCELLED) throw error;
+        failed = true;
         console.error(`[ExportPanel] ${char} export failed`, error);
         failedChars.push(char);
       }
+      throwIfExportCancelled(cancelRequestedRef.current);
+      if (!added && !failed) failedChars.push(char);
 
       setExportProgress({ current: index + 1, total: syllables.length });
       if ((index + 1) % YIELD_EVERY === 0) await delay(0);
@@ -148,42 +154,47 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
     setExportProgress({ current: 0, total: syllables.length });
 
     const render = (char) => format.create(char, colors, outputSize, layerOrder, renderMode);
-    const downloadSingleFile = async (char) => {
+    const downloadSingleFile = async (char, index) => {
       const content = await render(char);
       if (!content) return false;
+      throwIfExportCancelled(cancelRequestedRef.current);
       downloadBlob(format.toBlob(content), buildExportFilename({
         text,
         char,
         outputSize,
         type,
         renderMode,
+        sourceIndex: deduplicate ? null : index,
       }));
       return true;
     };
 
     try {
       if (syllables.length === 1) {
-        if (!await downloadSingleFile(syllables[0].char)) throw new Error(format.errorMessage);
+        if (!await downloadSingleFile(syllables[0].char, 0)) throw new Error(format.errorMessage);
         setExportProgress({ current: 1, total: 1 });
       } else if (useZip) {
-        const blob = await exportManyAsZip(async (zip, char) => {
+        const blob = await exportManyAsZip(async (zip, char, index) => {
           const content = await render(char);
           if (!content) return false;
+          throwIfExportCancelled(cancelRequestedRef.current);
           zip.file(buildExportFilename({
             text,
             char,
             outputSize,
             type,
             renderMode,
+            sourceIndex: deduplicate ? null : index,
           }), format.toBlob(content));
           return true;
         });
+        throwIfExportCancelled(cancelRequestedRef.current);
         downloadBlob(blob, buildExportFilename({ text, outputSize, type, renderMode, archive: true }));
       } else {
         const failedChars = [];
         for (let index = 0; index < syllables.length; index += 1) {
           throwIfExportCancelled(cancelRequestedRef.current);
-          const succeeded = await downloadSingleFile(syllables[index].char);
+          const succeeded = await downloadSingleFile(syllables[index].char, index);
           if (!succeeded) failedChars.push(syllables[index].char);
           setExportProgress({ current: index + 1, total: syllables.length });
           await delay(format.perFileDelay);
@@ -216,7 +227,7 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
           <span className="label-text" style={{ marginBottom: 0 }}>{t('export.outputSize')}</span>
           <span className="export-size-current">{outputSize}px</span>
         </div>
-        <div className="export-size-row" role="radiogroup" aria-label="출력 크기">
+        <div className="export-size-row" role="radiogroup" aria-label={t('export.outputSize')}>
           {SIZE_OPTIONS.map(opt => (
             <button
               key={opt.id}

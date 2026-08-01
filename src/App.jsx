@@ -142,7 +142,7 @@ export default function App() {
             <div
               className="font-variant-toggle"
               role="group"
-              aria-label="Font weight"
+              aria-label={t('font.weight')}
               data-active={fontVariant}
             >
               <div className="segmented-thumb" aria-hidden />
@@ -195,7 +195,7 @@ export default function App() {
                 height: 36,
               }}
               role="group"
-              aria-label="Language"
+              aria-label={t('lang.selector')}
             >
               <div
                 aria-hidden
@@ -437,14 +437,14 @@ export default function App() {
                 </div>
 
                 <div className="preview-toolbar">
-                  <div className="preview-background-toggle" role="group" aria-label="미리보기 배경">
+                  <div className="preview-background-toggle" role="group" aria-label={t('preview.background')}>
                     <button
                       type="button"
                       className={previewBackground === 'checker' ? 'active' : ''}
                       onClick={() => setPreviewBackground('checker')}
-                      aria-label="투명 격자 배경"
+                      aria-label={t('preview.checkerBackground')}
                       aria-pressed={previewBackground === 'checker'}
-                      title="투명 격자 배경"
+                      title={t('preview.checkerBackground')}
                     >
                       <span className="preview-background-swatch preview-background-swatch-checker" aria-hidden />
                     </button>
@@ -452,9 +452,9 @@ export default function App() {
                       type="button"
                       className={previewBackground === 'solid' ? 'active' : ''}
                       onClick={() => setPreviewBackground('solid')}
-                      aria-label="단색 배경"
+                      aria-label={t('preview.solidBackground')}
                       aria-pressed={previewBackground === 'solid'}
-                      title="단색 배경"
+                      title={t('preview.solidBackground')}
                     >
                       <span className="preview-background-swatch preview-background-swatch-solid" aria-hidden />
                     </button>
@@ -464,7 +464,7 @@ export default function App() {
                   <div
                     className="preview-size-toggle"
                     role="group"
-                    aria-label="Preview size"
+                    aria-label={t('preview.size')}
                     data-active={previewSizeId}
                   >
                     <div className="segmented-thumb" aria-hidden />

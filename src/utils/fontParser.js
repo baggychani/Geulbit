@@ -26,12 +26,12 @@ let bundledFontsPromise = null;
 /** 번들 폰트 (public/) */
 export const FONT_VARIANTS = {
   regular: {
-    url: import.meta.env.BASE_URL + 'UnDotum.ttf',
+    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotum.ttf',
     label: '일반',
     displayName: 'UnDotum',
   },
   bold: {
-    url: import.meta.env.BASE_URL + 'UnDotumBold.ttf',
+    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotumBold.ttf',
     label: '굵게',
     displayName: 'UnDotum Bold',
   },

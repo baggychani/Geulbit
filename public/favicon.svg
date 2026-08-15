@@ -1,31 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <linearGradient id="bg" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#7c3aed"/>
-      <stop offset="35%" stop-color="#ec4899"/>
-      <stop offset="70%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#22d3ee"/>
+    <linearGradient id="logo-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="35%" r="55%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    <radialGradient id="logo-glow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="glyph" x1="8" y1="8" x2="24" y2="26" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#fecaca"/>
-      <stop offset="35%" stop-color="#fef08a"/>
-      <stop offset="65%" stop-color="#93c5fd"/>
-      <stop offset="100%" stop-color="#c4b5fd"/>
-    </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
-  <rect width="32" height="32" rx="8" fill="url(#glow)"/>
+  <rect width="32" height="32" rx="8" fill="url(#logo-bg)"/>
+  <rect width="32" height="32" rx="8" fill="url(#logo-glow)"/>
   <text
     x="16"
     y="23.5"
     text-anchor="middle"
     font-size="18"
     font-weight="800"
-    fill="url(#glyph)"
+    fill="#ffffff"
     font-family="system-ui, 'Segoe UI', sans-serif"
   >가</text>
 </svg>

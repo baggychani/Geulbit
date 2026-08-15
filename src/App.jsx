@@ -37,10 +37,33 @@ export default function App() {
     setFontVariant,
   } = useFontManager();
 
-  const [text, setText] = useState('');
-  const [colors, setColors] = useState(DEFAULT_COLORS);
+  const [text, setText] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('text') || '';
+  });
+  const [colors, setColors] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const c1 = params.get('c1');
+    const c2 = params.get('c2');
+    const c3 = params.get('c3');
+    if (c1 && c2 && c3) {
+      return { choseong: '#' + c1, jungseong: '#' + c2, jongseong: '#' + c3 };
+    }
+    return DEFAULT_COLORS;
+  });
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [layerOrderKey, setLayerOrderKey] = useState('choseong_top');
+
+  // URL 상태 동기화
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (text) params.set('text', text);
+    else params.delete('text');
+    params.set('c1', colors.choseong.replace('#', ''));
+    params.set('c2', colors.jungseong.replace('#', ''));
+    params.set('c3', colors.jongseong.replace('#', ''));
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  }, [text, colors]);
 
 
   const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
@@ -105,9 +128,6 @@ export default function App() {
               <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)', lineHeight: 1.2 }}>
                 {t('header.title')}
               </h1>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {t('header.subtitle')}
-              </p>
             </div>
           </div>
 
@@ -330,7 +350,7 @@ export default function App() {
                   role="radio"
                   aria-checked={renderMode === 'classic'}
                   onClick={() => setRenderMode('classic')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-semibold"
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-medium leading-none"
                   style={{
                     background: renderMode === 'classic' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
                     border: `1.5px solid ${renderMode === 'classic' ? 'var(--accent)' : 'var(--border)'}`,
@@ -344,7 +364,7 @@ export default function App() {
                   role="radio"
                   aria-checked={renderMode === 'grid'}
                   onClick={() => setRenderMode('grid')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-semibold"
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-medium leading-none"
                   style={{
                     background: renderMode === 'grid' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
                     border: `1.5px solid ${renderMode === 'grid' ? 'var(--accent)' : 'var(--border)'}`,

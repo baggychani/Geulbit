@@ -43,10 +43,11 @@
   html {
     overflow-y: scroll;
     scrollbar-gutter: stable;
+    font-size: 16.5px;
   }
 
   body {
-    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', 'Inter', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     min-height: 100vh;
@@ -274,7 +275,7 @@
 
   .badge {
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 500;
     padding: 2px 8px;
     border-radius: 20px;
     background: var(--accent-glow);

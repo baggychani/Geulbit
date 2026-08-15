@@ -26,12 +26,12 @@ let bundledFontsPromise = null;
 /** 번들 폰트 (public/) */
 export const FONT_VARIANTS = {
   regular: {
-    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotum.ttf',
+    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotum.woff',
     label: '일반',
     displayName: 'UnDotum',
   },
   bold: {
-    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotumBold.ttf',
+    url: (import.meta.env?.BASE_URL ?? '/') + 'UnDotumBold.woff',
     label: '굵게',
     displayName: 'UnDotum Bold',
   },
@@ -270,7 +270,7 @@ export function buildExportSVG(char, colors, outputSize = 300, fontSize = 200, l
       tf = getAutoGridTransform(decomposed, jp.type, jp.bounds);
       if (tf) tf = `transform="${tf}"`;
     }
-    return `  <path fill="${colorMap[jp.type] || '#000'}" d="${jp.pathData}" ${tf}/>`;
+    return `  <path id="${jp.type}" class="jamo-path ${jp.type}" fill="${colorMap[jp.type] || '#000'}" d="${jp.pathData}" ${tf}/>`;
   }).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>

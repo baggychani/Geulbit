@@ -90,7 +90,7 @@ function buildExportFilename({ text, char, outputSize, type, renderMode, archive
 
 export default function ExportPanel({ text, colors, layerOrder, renderMode = 'classic' }) {
   const t = useT();
-  const [outputSize, setOutputSize] = useState(800);
+  const [outputSize, setOutputSize] = useState(1200);
   const [useZip, setUseZip] = useState(true);
   const [deduplicate, setDeduplicate] = useState(true);
   const [exporting, setExporting] = useState(null);
@@ -337,30 +337,6 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
         <button
           type="button"
           className="btn-primary w-full justify-center"
-          onClick={() => handleExport('png')}
-          disabled={!!exporting || syllables.length === 0}
-          id="export-png-btn"
-        >
-          <span className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0">
-            {exporting === 'png' ? (
-              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
-                <path d="M12 2a10 10 0 0 1 10 10" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            )}
-          </span>
-          <span>{t('export.pngDownload')}</span>
-        </button>
-
-        <button
-          type="button"
-          className="btn-secondary w-full justify-center"
           onClick={() => handleExport('svg')}
           disabled={!!exporting || syllables.length === 0}
           id="export-svg-btn"
@@ -380,6 +356,30 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
             )}
           </span>
           <span>{t('export.svgDownload')}</span>
+        </button>
+
+        <button
+          type="button"
+          className="btn-secondary w-full justify-center"
+          onClick={() => handleExport('png')}
+          disabled={!!exporting || syllables.length === 0}
+          id="export-png-btn"
+        >
+          <span className="inline-flex items-center justify-center w-5 h-5 flex-shrink-0">
+            {exporting === 'png' ? (
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+          </span>
+          <span>{t('export.pngDownload')}</span>
         </button>
       </div>
 

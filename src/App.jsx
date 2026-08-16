@@ -13,6 +13,7 @@ import ColorPicker from './components/ColorPicker';
 import TemplateSelector from './components/TemplateSelector';
 import ExportPanel from './components/ExportPanel';
 import LogoMark from './components/LogoMark';
+import ModeSelector from './components/ModeSelector';
 import { useFontManager } from './hooks/useFontManager';
 
 // 예시 텍스트
@@ -66,7 +67,7 @@ export default function App() {
   }, [text, colors]);
 
 
-  const [activeTab, setActiveTab] = useState('color'); // 'color' | 'template' | 'export'
+  const [activeTab, setActiveTab] = useState('export'); // 'export' | 'template' | 'color'
   const [previewSizeId, setPreviewSizeId] = useState('M');
   const [renderMode, setRenderMode] = useState('classic'); // 'classic' | 'grid'
   const [previewBackground, setPreviewBackground] = useState('checker'); // 'checker' | 'solid'
@@ -340,41 +341,13 @@ export default function App() {
             </div>
 
             {/* 모드 선택 벤토 */}
-            <div className="glass-card p-5">
-              <div className="section-title" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 12 }}>
-                <span>{t('mode.title')}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('mode.title')}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={renderMode === 'classic'}
-                  onClick={() => setRenderMode('classic')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-medium leading-none"
-                  style={{
-                    background: renderMode === 'classic' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
-                    border: `1.5px solid ${renderMode === 'classic' ? 'var(--accent)' : 'var(--border)'}`,
-                    color: renderMode === 'classic' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  }}
-                >
-                  {t('mode.classic')}
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={renderMode === 'grid'}
-                  onClick={() => setRenderMode('grid')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all duration-200 cursor-pointer text-xs font-medium leading-none"
-                  style={{
-                    background: renderMode === 'grid' ? 'rgba(124, 111, 247, 0.15)' : 'var(--bg-input)',
-                    border: `1.5px solid ${renderMode === 'grid' ? 'var(--accent)' : 'var(--border)'}`,
-                    color: renderMode === 'grid' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  }}
-                >
-                  {t('mode.grid')}
-                </button>
-              </div>
-            </div>
+            <ModeSelector
+              renderMode={renderMode}
+              onChange={setRenderMode}
+              colors={colors}
+              layerOrder={currentLayerOrder}
+              fontRevision={fontRevision}
+            />
 
             {/* 탭 패널 */}
             <div className="glass-card overflow-hidden">
@@ -384,9 +357,9 @@ export default function App() {
                 style={{ borderBottom: '1px solid var(--border)' }}
               >
                 {[
-                  { id: 'color', label: t('tab.color') },
-                  { id: 'template', label: t('tab.template') },
                   { id: 'export', label: t('tab.export') },
+                  { id: 'template', label: t('tab.template') },
+                  { id: 'color', label: t('tab.color') },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -417,14 +390,9 @@ export default function App() {
 
               {/* 탭 내용 */}
               <div className="p-5 tab-content-container">
-                {activeTab === 'color' && (
+                {activeTab === 'export' && (
                   <div className="fade-in">
-                    <ColorPicker
-                      colors={colors}
-                      onChange={handleColorChange}
-                      layerOrderKey={layerOrderKey}
-                      onLayerOrderChange={setLayerOrderKey}
-                    />
+                    <ExportPanel text={text} colors={colors} layerOrder={currentLayerOrder} renderMode={renderMode} />
                   </div>
                 )}
                 {activeTab === 'template' && (
@@ -435,9 +403,14 @@ export default function App() {
                     />
                   </div>
                 )}
-                {activeTab === 'export' && (
+                {activeTab === 'color' && (
                   <div className="fade-in">
-                    <ExportPanel text={text} colors={colors} layerOrder={currentLayerOrder} renderMode={renderMode} />
+                    <ColorPicker
+                      colors={colors}
+                      onChange={handleColorChange}
+                      layerOrderKey={layerOrderKey}
+                      onLayerOrderChange={setLayerOrderKey}
+                    />
                   </div>
                 )}
               </div>

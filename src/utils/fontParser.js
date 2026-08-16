@@ -94,6 +94,15 @@ export function getFont() {
 }
 
 /**
+ * 특정 변형(regular / bold) 폰트 반환
+ */
+export function getFontByVariant(variantKey = 'bold') {
+  const variant = FONT_VARIANTS[variantKey];
+  if (!variant) return loadedFont;
+  return fontCache.get(variant.url) || loadedFont;
+}
+
+/**
  * 한글 음절의 복합 글리프를 분해하여
  * 초성/중성/종성별 SVG path data를 반환합니다.
  * 
@@ -102,10 +111,11 @@ export function getFont() {
  * 
  * @param {string} char - 한글 음절 (예: '한')
  * @param {number} fontSize - 렌더링 크기 (font unit → pixel scale)
+ * @param {opentype.Font} [customFont] - 특정 폰트 인스턴스 (생략 시 현재 활성 폰트)
  * @returns {Array<{type, pathData}>|null}
  */
-export function extractJamoPaths(char, fontSize = 200) {
-  const font = loadedFont;
+export function extractJamoPaths(char, fontSize = 200, customFont = null) {
+  const font = customFont || loadedFont;
   if (!font) throw new Error('Font not loaded');
 
   const decomposed = decomposeHangul(char);
@@ -160,8 +170,8 @@ export function extractJamoPaths(char, fontSize = 200) {
 /**
  * 글리프의 bounding box 계산
  */
-export function getGlyphBoundingBox(char, fontSize = 200) {
-  const font = loadedFont;
+export function getGlyphBoundingBox(char, fontSize = 200, customFont = null) {
+  const font = customFont || loadedFont;
   if (!font) return null;
   const glyph = font.charToGlyph(char);
   if (!glyph) return null;

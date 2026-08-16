@@ -152,7 +152,7 @@
   }
 
   .tab-content-container {
-    min-height: 420px;
+    min-height: auto;
     box-sizing: border-box;
   }
 
@@ -261,10 +261,10 @@
 
   .section-title {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 550;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 16px;
@@ -528,7 +528,89 @@
     align-content: flex-start;
     align-items: flex-start;
     justify-content: flex-start;
-    min-height: 320px;
+    min-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 111, 247, 0.4) transparent;
+  }
+
+  .preview-stage::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .preview-stage::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px 0;
+  }
+
+  .preview-stage::-webkit-scrollbar-thumb {
+    background: rgba(124, 111, 247, 0.35);
+    border-radius: 99px;
+    transition: background 0.2s ease;
+  }
+
+  .preview-stage::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
+  .syllable-analysis-card {
+    transition: all 0.3s ease;
+  }
+
+  .syllable-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .syllable-chip {
+    min-width: 44px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 450;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .syllable-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124, 111, 247, 0.06);
+  }
+
+  .syllable-chip.active {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 550;
+  }
+
+  .syllable-detail-panel {
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+  }
+
+  .syllable-detail-main-char {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 36px;
+    text-align: center;
+    font-family: 'Noto Sans KR', sans-serif;
+    line-height: 1;
   }
 
   /* 내보내기 — 200~1200 한 줄, 고정 그리드(출렁임 방지) */
@@ -580,19 +662,23 @@
   }
 
   .export-zip-block {
-    min-height: 88px;
+    min-height: auto;
+    margin-bottom: 10px;
   }
 
   .export-zip-hint {
-    min-height: 2.5em;
+    min-height: auto;
     line-height: 1.45;
   }
 
   .export-panel-feedback {
-    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .export-panel-feedback:empty {
+    display: none;
   }
 
   .font-status-pill {

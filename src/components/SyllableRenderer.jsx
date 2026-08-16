@@ -4,7 +4,7 @@
  * opentype.js composite glyph 분해 결과를 사용
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { DIPHTHONG_INITIAL_SPLIT_X, extractJamoPaths, getFont, getGlyphBoundingBox, sortJamoPaths, DEFAULT_LAYER_ORDER, getAutoGridTransform } from '../utils/fontParser';
 import { decomposeHangul } from '../utils/hangulDecompose';
 import { useT } from '../utils/i18n';
@@ -33,7 +33,7 @@ export default function SyllableRenderer({
   const prevCharRef = useRef(char);
   const t = useT();
 
-  const decomposed = decomposeHangul(char);
+  const decomposed = useMemo(() => decomposeHangul(char), [char]);
 
   const colorMap = {
     choseong: colors?.choseong || '#E53E3E',
@@ -87,28 +87,30 @@ export default function SyllableRenderer({
   const isGridActive = renderMode === 'grid' && decomposed;
 
   const viewBox = `0 0 ${RENDER_SIZE} ${RENDER_SIZE}`;
-  let classicTransform = '';
-
-  if (bbox && bbox.x1 !== undefined && bbox.x1 !== Infinity) {
-    const pad = RENDER_SIZE * 0.04;
-    const bw = bbox.x2 - bbox.x1;
-    const bh = bbox.y2 - bbox.y1;
-    
-    if (bw > 0 && bh > 0) {
-      const cx = (bbox.x1 + bbox.x2) / 2;
-      const cy = (bbox.y1 + bbox.y2) / 2;
+  const classicTransform = useMemo(() => {
+    let tf = '';
+    if (bbox && bbox.x1 !== undefined && bbox.x1 !== Infinity) {
+      const pad = RENDER_SIZE * 0.04;
+      const bw = bbox.x2 - bbox.x1;
+      const bh = bbox.y2 - bbox.y1;
       
-      const targetW = RENDER_SIZE - pad * 2;
-      const targetH = RENDER_SIZE - pad * 2;
-      // 너무 작을 때는 강제로 키우지 않고(max scale 1), 클 때만 줄임
-      const scale = Math.min(targetW / bw, targetH / bh, 1);
-      
-      const tx = (RENDER_SIZE / 2) - cx * scale;
-      const ty = (RENDER_SIZE / 2) - cy * scale;
-      
-      classicTransform = `translate(${tx.toFixed(2)}, ${ty.toFixed(2)}) scale(${scale.toFixed(3)})`;
+      if (bw > 0 && bh > 0) {
+        const cx = (bbox.x1 + bbox.x2) / 2;
+        const cy = (bbox.y1 + bbox.y2) / 2;
+        
+        const targetW = RENDER_SIZE - pad * 2;
+        const targetH = RENDER_SIZE - pad * 2;
+        // 너무 작을 때는 강제로 키우지 않고(max scale 1), 클 때만 줄임
+        const scale = Math.min(targetW / bw, targetH / bh, 1);
+        
+        const tx = (RENDER_SIZE / 2) - cx * scale;
+        const ty = (RENDER_SIZE / 2) - cy * scale;
+        
+        tf = `translate(${tx.toFixed(2)}, ${ty.toFixed(2)}) scale(${scale.toFixed(3)})`;
+      }
     }
-  }
+    return tf;
+  }, [bbox]);
 
   const handleCopy = async () => {
     try {
@@ -127,7 +129,7 @@ export default function SyllableRenderer({
   };
 
   const svgSize = displaySize * 0.82;
-  const renderPaths = sortJamoPaths(paths, layerOrder);
+  const renderPaths = useMemo(() => sortJamoPaths(paths, layerOrder), [paths, layerOrder]);
 
   const transitionStyle = 'width 0.28s cubic-bezier(0.34, 1.05, 0.64, 1), height 0.28s cubic-bezier(0.34, 1.05, 0.64, 1)';
 

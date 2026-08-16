@@ -3,7 +3,7 @@
  * 한글 모아쓰기 색채 분리 도구 — 메인 앱
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT_VARIANTS, LAYER_ORDERS } from './utils/fontParser';
 import { parseText } from './utils/hangulDecompose';
 import { DEFAULT_COLORS, PREVIEW_SIZES } from './utils/colorTemplates';
@@ -14,6 +14,7 @@ import TemplateSelector from './components/TemplateSelector';
 import ExportPanel from './components/ExportPanel';
 import LogoMark from './components/LogoMark';
 import ModeSelector from './components/ModeSelector';
+import SyllableAnalysis from './components/SyllableAnalysis';
 import { useFontManager } from './hooks/useFontManager';
 
 // 예시 텍스트
@@ -55,15 +56,18 @@ export default function App() {
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [layerOrderKey, setLayerOrderKey] = useState('choseong_top');
 
-  // URL 상태 동기화
+  // URL 상태 동기화 (디바운싱 적용)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (text) params.set('text', text);
-    else params.delete('text');
-    params.set('c1', colors.choseong.replace('#', ''));
-    params.set('c2', colors.jungseong.replace('#', ''));
-    params.set('c3', colors.jongseong.replace('#', ''));
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (text) params.set('text', text);
+      else params.delete('text');
+      params.set('c1', colors.choseong.replace('#', ''));
+      params.set('c2', colors.jungseong.replace('#', ''));
+      params.set('c3', colors.jongseong.replace('#', ''));
+      window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    }, 500);
+    return () => clearTimeout(handler);
   }, [text, colors]);
 
 
@@ -88,10 +92,13 @@ export default function App() {
     setSelectedTemplate(null); // 템플릿 선택 해제
   }, []);
 
-  // 한글만 있는지 확인
-  const parsedChars = parseText(text);
-  const hangulChars = parsedChars.filter(c => c.isHangul);
-  const hasHangul = hangulChars.length > 0;
+  // 한글만 있는지 확인 (메모이제이션 적용)
+  const { parsedChars, hangulChars, hasHangul } = useMemo(() => {
+    const parsed = parseText(text);
+    const hangul = parsed.filter(c => c.isHangul);
+    return { parsedChars: parsed, hangulChars: hangul, hasHangul: hangul.length > 0 };
+  }, [text]);
+
   const previewSize = PREVIEW_SIZES.find(s => s.id === previewSizeId)?.value ?? 160;
   const activeVariant = FONT_VARIANTS[fontVariant];
   const currentLayerOrder = LAYER_ORDERS[layerOrderKey]?.order || LAYER_ORDERS.choseong_top.order;
@@ -284,12 +291,12 @@ export default function App() {
                 placeholder={t('input.placeholder')}
                 className="input-field flex-1"
                 style={{
-                  resize: 'vertical',
+                  resize: 'none',
                   fontFamily: 'Noto Sans KR, sans-serif',
                   fontSize: 15,
                   letterSpacing: '0.05em',
                   lineHeight: 1.6,
-                  minHeight: 100,
+                  minHeight: 88,
                 }}
               />
 
@@ -309,20 +316,22 @@ export default function App() {
                 ))}
               </div>
 
-              {/* 음절 분석 요약 */}
+              {/* [LEGACY] 음절 분석 요약 (우측 SyllableAnalysis 컴포넌트로 통합됨)
               {text && (
-                <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                  <div className="flex flex-wrap gap-1">
+                <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid var(--border)' }}>
+                  <div className="flex flex-wrap gap-1 items-center" style={{ minHeight: 22 }}>
                     {parsedChars.map((item, i) => (
                       <span
                         key={i}
-                        className="text-xs px-2 py-0.5 rounded-full"
+                        className="text-xs px-2 py-0.5 rounded-full inline-flex items-center"
                         style={{
                           background: item.isHangul ? 'rgba(124,111,247,0.12)' : 'var(--bg-input)',
                           color: item.isHangul ? 'var(--accent)' : 'var(--text-muted)',
                           border: `1px solid ${item.isHangul ? 'rgba(124,111,247,0.3)' : 'var(--border)'}`,
                           fontFamily: 'Noto Sans KR',
-                          fontSize: 13,
+                          fontSize: 12,
+                          height: 22,
+                          boxSizing: 'border-box',
                         }}
                       >
                         {item.char}
@@ -338,6 +347,7 @@ export default function App() {
                   </div>
                 </div>
               )}
+              */}
             </div>
 
             {/* 모드 선택 벤토 */}
@@ -545,7 +555,8 @@ export default function App() {
                     <div
                       className="preview-stage"
                       style={{
-                        justifyContent: hangulChars.length === 1 ? 'center' : 'flex-start',
+                        maxHeight: 520,
+                        justifyContent: 'flex-start',
                       }}
                     >
                       {hangulChars.map((item, i) => (
@@ -567,100 +578,9 @@ export default function App() {
             </div>
 
 
-            {/* 디버그 / 분석 정보 */}
+            {/* 음절 분석 */}
             {fontReady && hasHangul && (
-              <div className="glass-card p-5">
-                <div className="section-title">
-                  <span>{t('analysis.title')}</span>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {hangulChars.map((item, i) => {
-                    const d = item.decomposed;
-                    if (!d) return null;
-                    return (
-                      <div
-                        key={i}
-                        className="flex flex-wrap items-center gap-3 p-3 rounded-xl"
-                        style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
-                      >
-                        {/* 글자 */}
-                        <div
-                          className="text-3xl font-bold flex-shrink-0"
-                          style={{ fontFamily: 'Noto Sans KR', color: 'var(--text-primary)', width: 50, textAlign: 'center' }}
-                        >
-                          {item.char}
-                        </div>
-
-                        {/* 화살표 */}
-                        <div style={{ color: 'var(--text-muted)', fontSize: 20 }}>→</div>
-
-                        {/* 자소 분해 */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className="jamo-tag text-sm"
-                            style={{
-                              color: colors.choseong,
-                              borderColor: colors.choseong + '60',
-                              background: colors.choseong + '18',
-                            }}
-                          >
-                            {t('analysis.choseong')}: {d.choseong.jamo}
-                          </span>
-                          <span
-                            className="jamo-tag text-sm"
-                            style={{
-                              color: colors.jungseong,
-                              borderColor: colors.jungseong + '60',
-                              background: colors.jungseong + '18',
-                            }}
-                          >
-                            {t('analysis.jungseong')}: {d.jungseong.jamo}
-                          </span>
-                          {d.hasJongseong && (
-                            <span
-                              className="jamo-tag text-sm"
-                              style={{
-                                color: colors.jongseong,
-                                borderColor: colors.jongseong + '60',
-                                background: colors.jongseong + '18',
-                              }}
-                            >
-                              {t('analysis.jongseong')}: {d.jongseong.jamo}
-                            </span>
-                          )}
-                          {!d.hasJongseong && (
-                            <span
-                              className="jamo-tag text-sm"
-                              style={{
-                                color: 'var(--text-muted)',
-                                borderColor: 'var(--border)',
-                                background: 'var(--bg-input)',
-                                opacity: 0.5,
-                              }}
-                            >
-                              {t('analysis.noJongseong')}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 모음 방향 */}
-                        <div className="ml-auto flex-shrink-0">
-                          <span
-                            className="text-xs px-2 py-1 rounded-full"
-                            style={{
-                              background: 'var(--bg-secondary)',
-                              color: 'var(--text-muted)',
-                              border: '1px solid var(--border)',
-                            }}
-                          >
-                            {d.isVerticalVowel ? t('analysis.verticalVowel') : t('analysis.horizontalVowel')}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <SyllableAnalysis hangulChars={hangulChars} colors={colors} />
             )}
 
             {/* 사용 안내 */}

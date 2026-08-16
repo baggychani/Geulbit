@@ -102,6 +102,8 @@ export function getFontByVariant(variantKey = 'bold') {
   return fontCache.get(variant.url) || loadedFont;
 }
 
+const glyphPathCache = new WeakMap();
+
 /**
  * 한글 음절의 복합 글리프를 분해하여
  * 초성/중성/종성별 SVG path data를 반환합니다.
@@ -117,6 +119,16 @@ export function getFontByVariant(variantKey = 'bold') {
 export function extractJamoPaths(char, fontSize = 200, customFont = null) {
   const font = customFont || loadedFont;
   if (!font) throw new Error('Font not loaded');
+
+  if (!glyphPathCache.has(font)) {
+    glyphPathCache.set(font, new Map());
+  }
+  const fontCache = glyphPathCache.get(font);
+  const cacheKey = `${char}_${fontSize}`;
+
+  if (fontCache.has(cacheKey)) {
+    return fontCache.get(cacheKey);
+  }
 
   const decomposed = decomposeHangul(char);
   if (!decomposed) return null;
@@ -152,19 +164,25 @@ export function extractJamoPaths(char, fontSize = 200, customFont = null) {
       }
     }
 
-    if (result.length > 0) return result;
+    if (result.length > 0) {
+      fontCache.set(cacheKey, result);
+      return result;
+    }
   }
 
   // 폴백: 단순 글리프 전체를 초성으로
   console.warn(`[FontParser] '${char}': 단순 글리프 또는 컴포넌트 없음 → 폴백`);
   const path = glyph.getPath(0, fontSize, fontSize);
-  return [{
+  const fallbackResult = [{
     type: 'choseong',
     pathData: path.toPathData(3),
     glyphIndex: glyph.index,
     glyphName: glyph.name || '',
     bounds: path.getBoundingBox(),
   }];
+  
+  fontCache.set(cacheKey, fallbackResult);
+  return fallbackResult;
 }
 
 /**

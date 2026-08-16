@@ -215,7 +215,7 @@ export default function ExportPanel({ text, colors, layerOrder, renderMode = 'cl
       setExportProgress(null);
       cancelRequestedRef.current = false;
     }
-  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode, t]);
+  }, [syllables, colors, outputSize, useZip, exportManyAsZip, text, layerOrder, renderMode, deduplicate, t]);
 
   const handleCancelExport = useCallback(() => {
     cancelRequestedRef.current = true;

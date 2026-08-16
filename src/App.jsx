@@ -271,7 +271,7 @@ export default function App() {
             style={{ width: 340, flexShrink: 0 }}
           >
             {/* 텍스트 입력 */}
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 flex flex-col" style={{ minHeight: 280 }}>
               <div className="section-title">
                 <span>{t('input.title')}</span>
               </div>
@@ -281,14 +281,14 @@ export default function App() {
                 value={text}
                 onChange={e => setText(e.target.value)}
                 placeholder={t('input.placeholder')}
-                className="input-field"
+                className="input-field flex-1"
                 style={{
-                  height: 100,
                   resize: 'vertical',
                   fontFamily: 'Noto Sans KR, sans-serif',
                   fontSize: 15,
                   letterSpacing: '0.05em',
                   lineHeight: 1.6,
+                  minHeight: 100,
                 }}
               />
 
@@ -447,7 +447,7 @@ export default function App() {
           {/* ─── 오른쪽: 미리보기 패널 ─── */}
           <section className="flex-1 flex flex-col gap-5" style={{ minWidth: 0 }}>
             {/* 미리보기 헤더 */}
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 flex flex-col" style={{ minHeight: 280 }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="section-title" style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0 }}>
                   <span>{t('preview.title')}</span>
@@ -559,7 +559,7 @@ export default function App() {
                 <>
                   {!hasHangul ? (
                     <div
-                      className="flex items-center justify-center rounded-xl py-16"
+                      className="flex-1 flex items-center justify-center rounded-xl min-h-[140px]"
                       style={{ background: 'var(--bg-input)', border: '1px dashed var(--border-light)' }}
                     >
                       <div className="text-center">

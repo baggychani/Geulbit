@@ -294,13 +294,13 @@ export default function App() {
 
               {/* 예시 버튼 */}
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-xs" style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>{t('input.examples')}</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)', alignSelf: 'center', fontWeight: 400 }}>{t('input.examples')}</span>
                 {EXAMPLE_TEXTS.map(ex => (
                   <button
                     key={ex}
                     onClick={() => setText(ex)}
                     className="btn-secondary"
-                    style={{ padding: '4px 10px', fontSize: 12, fontFamily: 'Noto Sans KR' }}
+                    style={{ padding: '4px 10px', fontSize: 12, fontFamily: 'Noto Sans KR', fontWeight: 400 }}
                     id={`example-${ex}`}
                   >
                     {ex}
@@ -340,10 +340,10 @@ export default function App() {
             </div>
 
             {/* 모드 선택 벤토 */}
-            <div className="glass-card p-4">
-              <span className="text-xs font-bold mb-3 block" style={{ color: 'var(--text-secondary)' }}>
-                {t('mode.title')}
-              </span>
+            <div className="glass-card p-5">
+              <div className="section-title" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 12 }}>
+                <span>{t('mode.title')}</span>
+              </div>
               <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('mode.title')}>
                 <button
                   type="button"
@@ -448,8 +448,8 @@ export default function App() {
           <section className="flex-1 flex flex-col gap-5" style={{ minWidth: 0 }}>
             {/* 미리보기 헤더 */}
             <div className="glass-card p-5 flex flex-col" style={{ minHeight: 280 }}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="section-title" style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0 }}>
+              <div className="flex items-start justify-between mb-0.5">
+                <div className="section-title" style={{ paddingBottom: 0, borderBottom: 'none', marginBottom: 0, lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span>{t('preview.title')}</span>
                   {hasHangul && (
                     <span className="badge">{hangulChars.length} {t('preview.syllableCount')}</span>
@@ -505,23 +505,23 @@ export default function App() {
               </div>
 
               {/* 색상 범례 */}
-              <div className="flex gap-4 mb-5">
+              <div className="flex gap-3.5 mb-2.5" style={{ marginTop: -2 }}>
                 {[
                   { label: t('legend.choseong'), color: colors.choseong },
                   { label: t('legend.jungseong'), color: colors.jungseong },
                   { label: t('legend.jongseong'), color: colors.jongseong },
                 ].map(item => (
-                  <div key={item.label} className="flex items-center gap-2">
+                  <div key={item.label} className="flex items-center gap-1.5">
                     <div
                       style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 4,
+                        width: 11,
+                        height: 11,
+                        borderRadius: 3,
                         background: item.color,
                         flexShrink: 0,
                       }}
                     />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em' }}>
                       {item.label}
                     </span>
                   </div>
